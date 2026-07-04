@@ -1,0 +1,89 @@
+Every earlier kernel on this site was a CUDA-core kernel. It read floats into registers and issued `FFMA` instructions one multiply-accumulate at a time, and the whole game was feeding those scalar pipes fast enough. That ladder tops out. In [the warptile kernel](gemm-kernel-warptile.html) we reached **93.7% of cuBLAS** in FP32 and hit a wall the profiler was very clear about: register pressure pinned occupancy near 18%, and the FMA pipe was already the bottleneck at ~57% active. There was no more math throughput to buy on the CUDA cores. To go faster you have to stop using them for the multiply.
+
+This article is where we cross over. We switch to `bf16`, we hand the matrix multiply to the **tensor cores**, and we rebuild the entire data path around three Hopper-only mechanisms — **TMA**, **wgmma**, and **warp specialization** — plus **double buffering** to hide the memory latency underneath the math. The target stops being "a large fraction of cuBLAS" and becomes the real thing: match it, then beat it. By the end we are at **107% of cuBLAS**, and I want to be honest about what every one of those last percent cost.[[sn: All numbers here are from one H100 SXM5 at a square problem near `N = 4096`, `bf16` inputs with `fp32` accumulation, against the tensor-core cuBLAS path. Smaller or non-square problems shift the picture; the *ordering* of the wins is what generalizes.]]
+
+## The wall, restated in numbers
+
+Recall the ceiling. An H100 SXM5 does about **989 TFLOP/s** of `bf16` through its tensor cores, no sparsity. The CUDA-core FP32 path tops out an order of magnitude below that — a different, slower set of ALUs. So the warptile kernel's "93.7% of cuBLAS" was 93.7% of the *FP32* library, and in absolute terms it left the entire tensor-core budget on the floor. cuBLAS with tensor cores lives up near that 989 number; on this machine the baseline I'm chasing lands around **716 TFLOP/s** at this problem size, the gap to 989 being real hardware limits — power, occupancy, tail effects — that even NVIDIA can't close.
+
+So the honest framing for section 05 is: forget the FP32 ladder's percentages. We start over against a baseline roughly 3× higher, and our first tensor-core kernel — already using TMA and wgmma — lands at only **44% of it**. The climb from 44% to 107% is this whole article.
+
+[[fig: A memory-hierarchy pyramid titled "The Hopper GEMM data path" for one Streaming Multiprocessor. Bottom layer, a wide box labeled HBM3 in black with a green handwritten spec "80 GB · 3.35 TB/s". A fat blue dashed arrow labeled "TMA (async bulk copy)" rises from HBM to a middle box labeled "L2 ~50 MiB" (green note "128 B line / 4×32 B sectors, two partitions + crossbar"). Above that, a box labeled "SMEM 228 KiB usable" with a green note "of 256 KiB shared with L1, 32 banks" and a purple note "128 B swizzle applied by TMA". A blue arrow labeled "wgmma reads operands directly from SMEM" points from SMEM into an orange-outlined emphasis box labeled "TENSOR CORES" with a bold orange callout "the only unit that multiplies" and a green spec "989 TFLOP/s bf16". To the right, a stack labeled "Register file 256 KB/SM · 65536×32b · ≤255/thread" with a red note "accumulators live here: 32 fp32/thread". A dashed takeaway box reads "CUDA cores never touch the multiply — they only orchestrate". || The Hopper data path. TMA feeds SMEM, wgmma consumes SMEM, accumulators live in registers, and the scalar cores are reduced to traffic control.]]
+
+## Kernel A: the first tensor-core kernel (44% of cuBLAS)
+
+**Hypothesis:** just moving the multiply onto the tensor cores, with the minimum viable async load path, should leapfrog everything the CUDA-core ladder achieved.
+
+Two new primitives make this kernel. The first is the **Tensor Memory Accelerator** (TMA), a dedicated copy engine that moves an entire 2D tile from global to shared memory with one instruction. You describe the tile once, on the host, as a 128-byte **tensor map** built by `cuTensorMapEncodeTiled` — base pointer, tile shape, strides — and pass it to the kernel as a `__grid_constant__` parameter. Inside the kernel a single thread fires the copy; the rest of the block waits on a barrier. TMA also applies **128-byte swizzling** to the destination automatically, so the bank-conflict padding gymnastics from the earlier kernels[[sn: In the CUDA-core kernels we hand-padded shared tiles, e.g. `STRIDE_A = (TILE_M % 32 == 0) ? TILE_M + 4 : TILE_M`, to keep the 32 SMEM banks from colliding. TMA's swizzle makes that dance disappear — bank conflicts handled in hardware, for free.]] simply evaporate.
+
+The second is **wgmma** — `wgmma.mma_async`, warpgroup matrix-multiply-accumulate. A **warpgroup** is four warps, 128 threads, acting as one unit. A single `wgmma.mma_async.m64n64k16` instruction computes a `64×16` by `16×64` tile product — `64 × 64 × 16 = 65,536` multiply-accumulates from one issue, versus one MAC per `FFMA` on the CUDA cores. The operands are read *directly out of shared memory* via a 64-bit **matrix descriptor** built in-kernel (`make_smem_desc`) packing the SMEM base address, the leading-dimension and stride offsets, and a two-bit swizzle-mode field. The `64×64` accumulator is spread across the warpgroup as `d[4][8]` — 32 `fp32` values per thread, in registers.
+
+The instruction stream that actually matters is a fence, a batch of async MMAs stepping through `k`, a commit, and a wait:
+
+```cpp
+// one warpgroup, computing a 64x64 tile, 128 threads
+wgmma_fence();                       // wgmma.fence.sync.aligned
+#pragma unroll
+for (int k = 0; k < 4; ++k)          // 4 steps of k16 across a k64 tile
+    wgmma_m64n64k16(desc_a[k], desc_b[k], acc);  // wgmma.mma_async
+wgmma_commit_batch();                // wgmma.commit_group
+wgmma_wait<0>();                     // wgmma.wait_group  -> results in acc[]
+```
+
+[[fig: A SASS-listing-plus-diagram in two panels titled "One wgmma vs the FFMA loop it replaces". Left panel, a handwritten assembly column in purple: the old CUDA-core inner loop as a stack of repeated "FFMA R4, R6, R8, R4" lines with a red note "1 MAC per issue". Right below it a single line "WGMMA.MMA_ASYNC.M64N64K16" boxed in orange with a green note "65,536 MACs per issue". Right panel, a small memory diagram: a blue-hatched box "sharedA" and a green-hatched box "sharedB" in SMEM, each with a purple "matrix descriptor (64-bit)" tag pointing into them, a blue dashed arrow labeled "wgmma reads operands straight from SMEM (no register staging)" into a box "TENSOR CORE", output arrow to a red-outlined "acc: 32 fp32/thread in registers". A dashed takeaway box: "the multiply is now one async instruction; the CUDA cores only fence, commit, and wait". || The instruction that changes everything: one `wgmma` issue replaces thousands of `FFMA`s and reads its operands directly from swizzled shared memory.]]
+
+**Measurement:** this kernel does about **317 TFLOP/s**, or **44% of cuBLAS**. From 4.5% (the naive FP32 kernel re-run in this comparison) to 44% in one step. The tensor cores are finally lit. But the profiler shows load and compute running in lockstep — TMA copies, *then* wgmma, *then* the next copy — so half the time the tensor cores idle waiting on TMA and vice versa. Everything from here is about overlap.
+
+## Kernel B: bigger tiles (59%)
+
+**Hypothesis:** each `wgmma` reuses its shared-memory operands across the whole output tile, so a larger output tile amortizes each TMA load over more math. Arithmetic intensity, again — the same lesson as the [three regimes](the-three-regimes.html), now at the tile level.
+
+We go from `64×64` output tiles to `128×128`. More math per byte loaded, fewer trips to HBM per unit of work. Nothing clever, just a bigger tile.
+
+**Measurement: 423 TFLOP/s, 59% of cuBLAS.** Clean win. But `128×128` is close to a cliff we'll hit shortly: the accumulators for a big tile eat registers, and a single warpgroup can only be so wide before it runs out.
+
+[[fig: A tiling walkthrough in three numbered panels titled "Amortizing TMA loads over bigger tiles". Panel (1): matrix C drawn as a large square (red label N×N) with a small pale-yellow hatched 64×64 tile, blue note "1 TMA load of A-strip + B-strip feeds this". Panel (2): the same C with a 128×128 pale-yellow tile four times the area, a purple napkin-math note "4× the MACs per byte loaded". An orange arrow between the panels labeled "more reuse". Panel (3): a zoom of one warpgroup (128 threads drawn as a small 4×32 grid, blue label "4 warps = 1 warpgroup") holding a red-outlined register block labeled "acc: fp32 per thread". A dashed takeaway box: "bigger tile = higher arithmetic intensity, but accumulators grow → register wall ahead". || Bigger output tiles reuse each shared-memory operand across more wgmma calls, but the accumulator grows with tile area.]]
+
+## Kernel C: warp specialization (70%)
+
+**Hypothesis:** the load and the math want different resources — TMA needs almost no registers, wgmma needs almost all of them — so stop making the same warps do both. Split them.
+
+This is **warp specialization**, and it is the structural heart of every fast Hopper GEMM. We dedicate one warpgroup as the **producer**: its only job is to fire TMA copies and fill a shared-memory buffer. The other warpgroups are **consumers**: they do nothing but wgmma on the tiles the producer has staged. Producer and consumer hand off through a circular queue of shared-memory buffers guarded by barriers.
+
+The register asymmetry is the whole point, and Hopper gives you a knob for it: `setmaxnreg`. The producer warpgroup calls `setmaxnreg.dec` to *release* registers it doesn't need down to a small count; the consumers call `setmaxnreg.inc` to claim them. Registers are a per-SM resource of exactly 65536 32-bit slots; handing them from the load warps to the math warps is what lets the consumers run wide tiles without spilling.[[sn: The per-thread hardware maximum is 255 registers. `setmaxnreg` moves the *budget* between warpgroups within an SM's 256 KB register file — it does not change the 255 ceiling, it changes who gets to approach it.]]
+
+**Measurement: 498 TFLOP/s, 70% of cuBLAS.** The producer runs ahead, the consumers never wait on a cold buffer, and the tensor cores stay lit while TMA works in the shadow of the math. This is double buffering in its first real form — the load of tile `i+1` overlaps the compute of tile `i`.
+
+## Kernel D: two consumers and the register cliff (88%)
+
+**Hypothesis:** one consumer warpgroup can't saturate the tensor cores on its own; add a second, and make the tile taller to feed both.
+
+We go to `128×256` tiles with **two consumer warpgroups** and one producer, deepening the pipeline to several stages so the producer can run further ahead. This is where the wins get big — and where I hit the register cliff the last figure warned about. At `128×256`, the output accumulator alone wants **256 registers per thread**, past the 255 hardware maximum, so the compiler spills to local memory and the whole thing serializes. The fix is arithmetic on the tile shape and the queue depth: shrink the per-thread accumulator footprint, trade a pipeline stage for register headroom, and let `setmaxnreg` do the rest.
+
+There was also a synchronization tax hiding in the barriers. The naive queue used a token count that incremented on every buffer — hundreds of atomics per tile row. Replacing it with **phase-based barriers** — a shared-memory `mbarrier` where you track a parity bit and `mbarrier.try_wait` on the expected phase, initialized once and reused across every iteration — collapsed the synchronization from **257 barriers to 3**.
+
+**Measurement: 631 TFLOP/s, 88% of cuBLAS.** We are now genuinely close. The tensor cores are the bottleneck, which is exactly where you want to be — from here, further wins come from feeding them without ever letting a bubble form, and from being smarter about where the *bytes* come from.
+
+[[fig: A pipeline timeline titled "Warp specialization + multi-stage double buffering". Three horizontal lanes with time flowing left to right. Top lane labeled "PRODUCER (1 warpgroup)" in blue: a row of TMA-copy boxes "load tile 0", "load tile 1", "load tile 2" each shifted early, purple note "setmaxnreg.dec → few registers". Middle and bottom lanes labeled "CONSUMER 0" and "CONSUMER 1" in yellow fill: rows of wgmma boxes "mma tile 0", "mma tile 1" that begin one step after the matching load and overlap it, purple note "setmaxnreg.inc → claim registers". Vertical dashed lines between load(i+1) and mma(i) labeled in orange "overlap = hidden latency". A green side note "queue = ring of SMEM buffers, phase-bit mbarrier (257 → 3 barriers)". Dashed takeaway box: "producer runs ahead; consumers never see a cold buffer". || The pipeline: one lean producer warpgroup stays ahead of two register-hungry consumers, and every load hides under the previous tile's math.]]
+
+## The last nineteen percent
+
+Everything above got us to 88% with big structural moves. The climb from 88% to 107% is a different kind of work — no single idea, just a stack of small, measured, unglamorous wins. This is the part hiring managers should read closely, because it is where the discipline shows.
+
+**L2-aware scheduling (→ 92%).** The order in which thread blocks claim output tiles determines how much of `A` and `B` is already sitting in the **L2 cache** (~50 MiB on this chip, shared across all SMs) when a block needs it. The default row-major tile order thrashes L2. Instead we go **persistent** — launch exactly one block per SM and have each loop over a device-computed tile list — and assign those tiles in `16×8` super-regions so neighboring SMs work on neighboring tiles and reuse each other's L2 residency. The tile-to-SM mapping becomes a program you control, not something the launch config hands you. This lifted the **L2 hit rate to ~83%** — comfortably above the ~70% the row-major order (and cuBLAS itself) sees — and bought **660 TFLOP/s, 92%**. One caution the profiler taught me: trying to use all 132 SMs with an uneven grouping actually *degraded* locality by a couple of TFLOP/s — the clean grouping mattered more than the extra SMs.
+
+**Faster PTX barriers (→ 98%).** The producer-consumer handshake was still going through the CUDA `barrier` API. Dropping to hand-written PTX `mbarrier` operations with manual phase tracking, reused across every iteration with no re-init, was worth a clean **10%: 704 TFLOP/s, 98% of cuBLAS.** One point away.
+
+**Thread-block clusters + TMA multicast (→ 102%).** Hopper lets a handful of SMs form a **thread-block cluster** whose shared memory is mutually addressable — **Distributed Shared Memory** (DSMEM). Two SMs in a cluster frequently need the *same* strip of `B`; instead of each issuing its own TMA load, one TMA **multicast** delivers that strip to both SMs' shared memory at once, halving that load's HBM traffic. Cluster barriers extend the same `mbarrier` phase trick across SMs via the `cluster` qualifier. This is the step that crosses the line: **734 TFLOP/s, 102% of cuBLAS.**
+
+**Store-path and micro-optimizations (→ 106%).** Writing the `fp32` results back was still naive. Three changes: reorder register writes so consecutive registers map to nearby addresses; use write-through stores (`__stwt`) so the output doesn't evict useful `A`/`B` tiles from L2; and route the store *through shared memory and back out via TMA* asynchronously, so it overlaps the next tile's compute instead of stalling at the end. With a scatter of instruction reordering these were worth **747 then 758 TFLOP/s — 104%, then 106%.**[[sn: The async store isn't free: staging outputs through SMEM steals capacity from the producer's ring buffer, so you trade a pipeline stage for the overlap. It only pays because by this point the un-overlapped final store is a measurable fraction of runtime.]]
+
+**Hilbert-curve scheduling (→ 107%).** The last, most marginal win. Replace the `16×8` block ordering with a **Hilbert space-filling curve** over the tile grid, so *consecutive* tile assignments are always spatially adjacent and L2 reuse is maximal at every step, not just within a super-region. **764 TFLOP/s, 107% of cuBLAS** — worth about **1%** for a real jump in scheduling complexity. This is the shape of the frontier: the closer you get, the more engineering each point costs.
+
+## What the last few percent actually cost
+
+Summed honestly: warp specialization and double buffering did the heavy lifting from 44% to 88%. The remaining nineteen points were bought with L2 rasterization, hand-written barriers, cluster multicast, an async store path, and a space-filling curve — five separate ideas, each worth low single digits, each requiring its own profile to justify.
+
+And there is a ceiling above all of it. Past `N = 4096` I hit a **power wall**: the H100's ~700 W envelope means you cannot run every tensor core flat-out at once, so the achievable fraction of the 989 TFLOP/s theoretical peak is bounded by watts, not cleverness. cuBLAS lives against the same wall — which is exactly why "beating cuBLAS" tops out near 107% and not 130%. We are both bumping the same physical ceiling from underneath.
+
+That is the frontier. The lesson isn't the number; it's that the last ten percent is a portfolio of measured, individually-unimpressive wins, and the discipline — predict, measure, keep only what the profiler credits — is the same one we started with on the naive kernel. The tools got exotic. The loop never changed.[[sn: Everything here targets `sm_90a`; TMA, wgmma, clusters, and DSMEM are Hopper-specific. On Blackwell the data path shifts again: `tcgen05` MMAs write into a new **Tensor Memory** (TMEM) rather than registers, CTA pairs replace the two-SM cluster idiom, and `NVFP4` block-scaled formats change the arithmetic itself. A different frontier, same worklog.]]

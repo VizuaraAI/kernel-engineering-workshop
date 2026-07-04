@@ -30,17 +30,22 @@ SLUG2IDX = {a["slug"]: i for i, a in enumerate(FLAT)}
 def esc(s): return html.escape(s, quote=False)
 
 def inline(text, ctx):
-    """Inline formatting. ctx carries per-article sidenote counter list."""
-    # sidenotes first (may sit mid-sentence)
+    """Inline formatting. Sidenotes are stashed so inline_basic()'s escaping
+    doesn't mangle their generated HTML, then restored afterwards."""
+    stash = []
     def sn(m):
         ctx["sn"] += 1
         n = ctx["sn"]
         note = inline_basic(m.group(1).strip())
-        return (f'<label for="sn-{ctx["slug"]}-{n}" class="sn-ref">{n}</label>'
-                f'<input type="checkbox" id="sn-{ctx["slug"]}-{n}" class="sn-toggle">'
-                f'<span class="sidenote"><sup>{n}</sup> {note}</span>')
+        stash.append(
+            f'<label for="sn-{ctx["slug"]}-{n}" class="sn-ref">{n}</label>'
+            f'<input type="checkbox" id="sn-{ctx["slug"]}-{n}" class="sn-toggle">'
+            f'<span class="sidenote"><sup>{n}</sup> {note}</span>')
+        return f"\x01{len(stash)-1}\x01"
     text = re.sub(r"\[\[sn:\s*(.+?)\]\]", sn, text, flags=re.S)
-    return inline_basic(text)
+    text = inline_basic(text)
+    text = re.sub(r"\x01(\d+)\x01", lambda m: stash[int(m.group(1))], text)
+    return text
 
 def inline_basic(text):
     # inline code (protect), then links, bold, italic
