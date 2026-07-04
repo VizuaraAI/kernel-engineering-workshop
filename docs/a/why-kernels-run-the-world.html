@@ -5,12 +5,13 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,700;1,400&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../assets/app.css">
-</head><body class="canvas-paper">
+</head><body class="canvas-paper has-sb">
 <div class="topbar">
-  <a class="brand" href="../index.html"><span class="logo">▚</span> Kernel&nbsp;Engineering</a>
-  <button class="menu-btn" onclick="document.body.classList.toggle('sb-open')">☰</button>
+  <a class="brand" href="../index.html"><img class="brand-mark" src="../assets/logo.png" alt="" onerror="this.style.display='none'"><span class="brand-txt">Vizuara <b>Kernel&nbsp;Engineering</b></span></a>
+  <nav class="topnav"><a class="tn active" href="../book.html">The Book</a><a class="tn" href="../workshop.html">Workshop</a><a class="tn" href="../projects.html">Projects</a><a class="tn" href="../interactive.html">Interactive</a></nav>
+  <button class="menu-btn" onclick="document.body.classList.toggle(&#39;sb-open&#39;)">☰</button>
   <div class="top-links">
-    <button class="tbtn" id="search-open">Search <kbd>⌘K</kbd></button>
+    <button class="tbtn icon" id="search-open" title="Search (⌘K)">⌘K</button>
     <button class="tbtn" id="theme-btn">Terminal</button>
     <a class="tbtn enroll" href="../workshop.html">Enroll →</a>
   </div>

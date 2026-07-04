@@ -1,0 +1,50 @@
+<!doctype html><html lang="en" data-theme="terminal"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Interactive · Vizuara Kernel Engineering</title>
+<meta name="description" content="From silicon to speculative decoding — write GPU kernels that actually run modern LLMs.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,700;1,400&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/app.css">
+</head><body class="canvas-dark">
+<div class="topbar">
+  <a class="brand" href="index.html"><img class="brand-mark" src="assets/logo.png" alt="" onerror="this.style.display='none'"><span class="brand-txt">Vizuara <b>Kernel&nbsp;Engineering</b></span></a>
+  <nav class="topnav"><a class="tn" href="book.html">The Book</a><a class="tn" href="workshop.html">Workshop</a><a class="tn" href="projects.html">Projects</a><a class="tn active" href="interactive.html">Interactive</a></nav>
+  
+  <div class="top-links">
+    <button class="tbtn icon" id="search-open" title="Search (⌘K)">⌘K</button>
+    <button class="tbtn" id="theme-btn">Terminal</button>
+    <a class="tbtn enroll" href="workshop.html">Enroll →</a>
+  </div>
+</div>
+<div class="layout nosb">
+
+<main class="content"><div class="section-page interactive-page">
+<div class="crumb">/ interactive</div>
+<h1 class="sec-h1">Interactive</h1>
+<p class="sec-blurb">Practice, not just reading. Test yourself against the core ideas, then work the guided GPU-Puzzles track. More hands-on kernel challenges are landing here as the workshop grows.</p>
+
+<div class="int-panel">
+  <div class="int-head"><h2 class="ws-h2">The GPU-Puzzles track</h2></div>
+  <p class="int-p">Fourteen tiny puzzles that build the kernel-writer's instincts — map, zip, guards, broadcasting, shared memory, pooling, dot product, convolution, prefix sum and a first matmul. Do them in the browser, then read our walkthroughs.</p>
+  <div class="int-links">
+    <a class="btn" href="https://github.com/srush/GPU-Puzzles" target="_blank" rel="noopener">Open GPU-Puzzles ↗</a>
+    <a class="btn" href="a/gpu-puzzles-walkthrough-1.html">Walkthrough I →</a>
+    <a class="btn" href="a/gpu-puzzles-walkthrough-2.html">Walkthrough II →</a>
+  </div>
+</div>
+
+<div class="int-panel">
+  <div class="int-head"><h2 class="ws-h2">Quiz yourself</h2><span class="quiz-score" id="quiz-score">0 / 12</span></div>
+  <p class="int-p">Twelve questions spanning the regimes, the GEMM ladder, inference kernels and the frontier. Pick an answer to see the explanation.</p>
+  <div class="quiz" data-total="12"><div class="quiz-q" data-correct="1"><div class="q-num">Q1</div><div class="q-text">A kernel achieves 4% of the GPU's peak FLOP/s and near-peak HBM bandwidth. What is it?</div><div class="q-opts"><button class="q-opt" data-i="0">Compute-bound</button><button class="q-opt" data-i="1">Memory-bandwidth-bound</button><button class="q-opt" data-i="2">Overhead-bound</button></div><div class="q-exp">Near-peak bandwidth with tiny FLOP utilisation is the signature of a memory-bound kernel — adding faster math won't help.</div></div><div class="quiz-q" data-correct="2"><div class="q-num">Q2</div><div class="q-text">The H100's tensor cores do ~989 TFLOP/s bf16 and HBM3 gives ~3.35 TB/s. Roughly what arithmetic intensity must a kernel exceed to be compute-bound?</div><div class="q-opts"><button class="q-opt" data-i="0">~3 FLOPs/byte</button><button class="q-opt" data-i="1">~30 FLOPs/byte</button><button class="q-opt" data-i="2">~295 FLOPs/byte</button></div><div class="q-exp">989e12 / 3.35e12 ≈ 295 FLOPs per byte — the ridge point. Below it you're memory-bound no matter what.</div></div><div class="quiz-q" data-correct="1"><div class="q-num">Q3</div><div class="q-text">In the GEMM ladder, the jump from naive (1.3%) to 8.5% of cuBLAS comes from…</div><div class="q-opts"><button class="q-opt" data-i="0">Shared-memory tiling</button><button class="q-opt" data-i="1">Global-memory coalescing</button><button class="q-opt" data-i="2">Tensor cores</button></div><div class="q-exp">Kernel 2 is a one-line thread-index remap so a warp reads contiguous columns — coalesced access, ~6× for free.</div></div><div class="quiz-q" data-correct="1"><div class="q-num">Q4</div><div class="q-text">Why must GEMM block over the K dimension when using shared memory?</div><div class="q-opts"><button class="q-opt" data-i="0">To improve numerical accuracy</button><button class="q-opt" data-i="1">Because SMEM is too small to hold full rows/columns</button><button class="q-opt" data-i="2">To avoid warp divergence</button></div><div class="q-exp">SMEM is ~228 KiB; you can't stage whole K-length rows/cols, so you tile K and accumulate across tiles.</div></div><div class="quiz-q" data-correct="1"><div class="q-num">Q5</div><div class="q-text">A float4 / LDS.128 load moves 128 bits per instruction. Its main benefit over four scalar loads is…</div><div class="q-opts"><button class="q-opt" data-i="0">More total bytes moved</button><button class="q-opt" data-i="1">Fewer instruction issues / transactions for the same bytes</button><button class="q-opt" data-i="2">Higher numerical precision</button></div><div class="q-exp">Same bytes, a quarter of the instructions — a win precisely when you're issue-bound, as in kernel 6.</div></div><div class="quiz-q" data-correct="1"><div class="q-num">Q6</div><div class="q-text">On an H100, shared memory has 32 banks. A bank conflict happens when…</div><div class="q-opts"><button class="q-opt" data-i="0">Two warps use the same SM</button><button class="q-opt" data-i="1">Lanes in a warp hit the same bank but different words</button><button class="q-opt" data-i="2">You exceed 228 KiB of SMEM</button></div><div class="q-exp">Multiple lanes addressing different words in the same bank serialise; padding (+1) or swizzling fixes it.</div></div><div class="quiz-q" data-correct="1"><div class="q-num">Q7</div><div class="q-text">Why is LLM decode (one token at a time) usually memory-bound?</div><div class="q-opts"><button class="q-opt" data-i="0">It runs huge GEMMs</button><button class="q-opt" data-i="1">It re-reads the whole KV cache per step for little math (a GEMV)</button><button class="q-opt" data-i="2">It uses too many registers</button></div><div class="q-exp">Decode is a skinny mat-vec dominated by reading the KV cache from HBM — the opposite regime from prefill.</div></div><div class="quiz-q" data-correct="1"><div class="q-num">Q8</div><div class="q-text">FlashAttention's core trick is…</div><div class="q-opts"><button class="q-opt" data-i="0">Storing the N×N scores in HBM in FP8</button><button class="q-opt" data-i="1">Online softmax so the N×N scores never materialise in HBM</button><button class="q-opt" data-i="2">Skipping the softmax entirely</button></div><div class="q-exp">Tiling + online-softmax rescaling fuses attention into one kernel; traffic scales like N·d, not N².</div></div><div class="quiz-q" data-correct="1"><div class="q-num">Q9</div><div class="q-text">What is new in Hopper (sm_90a) that Ampere lacks?</div><div class="q-opts"><button class="q-opt" data-i="0">CUDA cores</button><button class="q-opt" data-i="1">TMA, WGMMA, DSMEM and thread-block clusters</button><button class="q-opt" data-i="2">The L2 cache</button></div><div class="q-exp">Hopper adds the Tensor Memory Accelerator, warpgroup MMA, distributed shared memory and clusters.</div></div><div class="quiz-q" data-correct="1"><div class="q-num">Q10</div><div class="q-text">DeepSeek-V4-Pro-DSpark is best described as…</div><div class="q-opts"><button class="q-opt" data-i="0">A brand-new base model</button><button class="q-opt" data-i="1">The V4-Pro checkpoint plus a speculative-decoding module</button><button class="q-opt" data-i="2">A new GPU architecture</button></div><div class="q-exp">DSpark is a speculative-decoding module bolted onto V4-Pro — draft tokens verified in parallel; a kernels problem.</div></div><div class="quiz-q" data-correct="1"><div class="q-num">Q11</div><div class="q-text">In Stanford CRFM's AI-generated-kernel experiments, results were…</div><div class="q-opts"><button class="q-opt" data-i="0">Uniformly superhuman</button><button class="q-opt" data-i="1">Great on some (LayerNorm 484% of PyTorch) but poor on others (FlashAttention 9%)</button><button class="q-opt" data-i="2">Never correct</button></div><div class="q-exp">Branching search shone on less-tuned FP32 ops but still trailed badly on hard ones like FlashAttention.</div></div><div class="quiz-q" data-correct="1"><div class="q-num">Q12</div><div class="q-text">Which is the right first move when a kernel hangs and Ctrl-C does nothing?</div><div class="q-opts"><button class="q-opt" data-i="0">Reboot the machine</button><button class="q-opt" data-i="1">Trigger a user CUDA core dump and open it in cuda-gdb</button><button class="q-opt" data-i="2">Delete the kernel</button></div><div class="q-exp">The vLLM workflow: CUDA_ENABLE_USER_TRIGGERED_COREDUMP via a named pipe, then cuda-gdb on the dump.</div></div></div>
+</div>
+</div></main>
+</div>
+<div class="search-modal" id="search-modal"><div class="search-box">
+  <input id="search-input" placeholder="Search articles, terms, kernels…" autocomplete="off">
+  <div id="search-results"></div>
+  <div class="search-hint">↑↓ to navigate · ↵ to open · esc to close</div>
+</div></div>
+<script>window.SEARCH_BASE="";</script>
+<script src="assets/app.js"></script>
+</body></html>

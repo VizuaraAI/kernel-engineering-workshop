@@ -1,0 +1,39 @@
+<!doctype html><html lang="en" data-theme="terminal"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Projects · Vizuara Kernel Engineering</title>
+<meta name="description" content="From silicon to speculative decoding — write GPU kernels that actually run modern LLMs.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,700;1,400&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/app.css">
+</head><body class="canvas-dark">
+<div class="topbar">
+  <a class="brand" href="index.html"><img class="brand-mark" src="assets/logo.png" alt="" onerror="this.style.display='none'"><span class="brand-txt">Vizuara <b>Kernel&nbsp;Engineering</b></span></a>
+  <nav class="topnav"><a class="tn" href="book.html">The Book</a><a class="tn" href="workshop.html">Workshop</a><a class="tn active" href="projects.html">Projects</a><a class="tn" href="interactive.html">Interactive</a></nav>
+  
+  <div class="top-links">
+    <button class="tbtn icon" id="search-open" title="Search (⌘K)">⌘K</button>
+    <button class="tbtn" id="theme-btn">Terminal</button>
+    <a class="tbtn enroll" href="workshop.html">Enroll →</a>
+  </div>
+</div>
+<div class="layout nosb">
+
+<main class="content"><div class="section-page">
+<div class="crumb">/ projects</div>
+<h1 class="sec-h1">Projects</h1>
+<p class="sec-blurb">Reading is not enough — kernels are learned by writing them. Each project is a build you do with your hands, pointed at the exact chapters that carry it. Work top to bottom, or jump to your level. Every one produces something you can put in a worklog and show an employer.</p>
+<div class="proj-grid"><div class="proj"><div class="proj-top"><span class="proj-level lvl-beginner">beginner</span></div><h3>GPU Puzzles: the on-ramp</h3><p>Solve Sasha Rush's 14 GPU-Puzzles to internalise the one-thread-one-element model, indexing, guards, shared memory and reductions — the fastest way from zero to writing correct kernels.</p><div class="proj-links"><a href="a/gpu-puzzles-walkthrough-1.html">Walkthrough I →</a> <a href="a/gpu-puzzles-walkthrough-2.html">Walkthrough II →</a></div></div><div class="proj"><div class="proj-top"><span class="proj-level lvl-core">core</span></div><h3>GEMM to 94% of cuBLAS</h3><p>Build matrix-multiply from a 1.3%-of-cuBLAS naive kernel up the full ten-step ladder — coalescing, SMEM tiling, register tiling, vectorization, autotuning, warptiling — profiling every step.</p><div class="proj-links"><a href="a/gemm-kernel-1-naive.html">Start: Kernel 1 (naive) →</a> <a href="a/gemm-recap-the-ladder.html">The ladder, end to end →</a></div></div><div class="proj"><div class="proj-top"><span class="proj-level lvl-core">core</span></div><h3>Matmul on tensor cores</h3><p>Rebuild GEMM a second time on the tensor cores: wmma fragments, SMEM swizzling to kill bank conflicts, and mma.sync to library-class speed.</p><div class="proj-links"><a href="a/tc-kernel-1-wmma-intro.html">Tensor cores I: WMMA →</a> <a href="a/tc-kernel-3-mma-sync-fast.html">Tensor cores III: fast →</a></div></div><div class="proj"><div class="proj-top"><span class="proj-level lvl-advanced">advanced</span></div><h3>FlashAttention from scratch</h3><p>Fuse the whole attention into one kernel with online softmax so the N×N scores never touch HBM — then benchmark it against PyTorch's SDPA.</p><div class="proj-links"><a href="a/flashattention-1.html">FlashAttention I →</a> <a href="a/softmax-from-scratch.html">Online softmax →</a></div></div><div class="proj"><div class="proj-top"><span class="proj-level lvl-expert">expert</span></div><h3>Beat cuBLAS on an H100</h3><p>Assemble TMA, WGMMA and warp specialization into a Hopper GEMM that matches or beats NVIDIA's own library — the full frontier worklog.</p><div class="proj-links"><a href="a/beating-cublas-on-h100.html">Beating cuBLAS on H100 →</a> <a href="a/hopper-wgmma-warp-specialization.html">WGMMA &amp; warp specialization →</a></div></div><div class="proj"><div class="proj-top"><span class="proj-level lvl-capstone">capstone</span></div><h3>You vs. the machine (capstone)</h3><p>Pick a kernel (SwiGLU, a FlashAttention variant, histogram…), optimize it BY HAND, then run an LLM-in-the-loop against your own kernel and document — CS149 × KernelBench — what each found that the other missed.</p><div class="proj-links"><a href="a/kernelbench-and-fast-p.html">KernelBench &amp; fast_p →</a> <a href="a/swiglu-kernel.html">The SwiGLU kernel →</a></div></div><div class="proj"><div class="proj-top"><span class="proj-level lvl-skill">skill</span></div><h3>Debug a broken kernel</h3><p>Take a kernel with a race, a misaligned vector load and a silent NaN, and hunt each down with compute-sanitizer, user-triggered core dumps, cuda-gdb and nvdisasm — the vLLM workflow.</p><div class="proj-links"><a href="a/debugging-kernels-vllm-workflow.html">The vLLM debugging workflow →</a></div></div></div>
+<div class="ws-cta">
+  <div class="ws-price">Want these reviewed live and a certificate?</div>
+  <a class="btn solid" href="workshop.html">See Vizuara's Kernel Engineering Workshop →</a>
+</div>
+</div></main>
+</div>
+<div class="search-modal" id="search-modal"><div class="search-box">
+  <input id="search-input" placeholder="Search articles, terms, kernels…" autocomplete="off">
+  <div id="search-results"></div>
+  <div class="search-hint">↑↓ to navigate · ↵ to open · esc to close</div>
+</div></div>
+<script>window.SEARCH_BASE="";</script>
+<script src="assets/app.js"></script>
+</body></html>

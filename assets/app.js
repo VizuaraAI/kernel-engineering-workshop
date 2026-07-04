@@ -55,3 +55,26 @@
   });
   modal.addEventListener("click",function(e){if(e.target===modal)hide();});
 })();
+
+// quiz
+(function(){
+  var quiz=document.querySelector(".quiz"); if(!quiz) return;
+  var score=0, scoreEl=document.getElementById("quiz-score"),
+      total=quiz.getAttribute("data-total")||"0";
+  Array.prototype.forEach.call(quiz.querySelectorAll(".quiz-q"),function(q){
+    var correct=parseInt(q.getAttribute("data-correct"),10);
+    var opts=q.querySelectorAll(".q-opt");
+    Array.prototype.forEach.call(opts,function(opt){
+      opt.addEventListener("click",function(){
+        if(q.classList.contains("answered")) return;
+        q.classList.add("answered");
+        var pick=parseInt(opt.getAttribute("data-i"),10);
+        opts[correct].classList.add("correct");
+        if(pick===correct){ score++; }
+        else { opt.classList.add("wrong"); }
+        Array.prototype.forEach.call(opts,function(o){o.disabled=true;});
+        if(scoreEl) scoreEl.textContent=score+" / "+total;
+      });
+    });
+  });
+})();

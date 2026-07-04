@@ -162,7 +162,14 @@ def sidebar(active_slug, rel):
         rows.append("</details>")
     return '<nav class="sidebar" id="sidebar">' + "".join(rows) + "</nav>"
 
-def shell(title, main_html, active_slug=None, rel="", canvas="dark", extra_head=""):
+def shell(title, main_html, active_slug=None, rel="", canvas="dark", extra_head="",
+          with_sidebar=False, active_nav=""):
+    def nl(href, label, key):
+        return f'<a class="tn{" active" if key==active_nav else ""}" href="{rel}{href}">{label}</a>'
+    topnav = (nl("book.html", "The Book", "book") + nl("workshop.html", "Workshop", "workshop")
+              + nl("projects.html", "Projects", "projects") + nl("interactive.html", "Interactive", "interactive"))
+    sb = sidebar(active_slug, rel) if with_sidebar else ""
+    layout_cls = "layout" if with_sidebar else "layout nosb"
     return f"""<!doctype html><html lang="en" data-theme="terminal"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{esc(title)}</title>
@@ -170,18 +177,19 @@ def shell(title, main_html, active_slug=None, rel="", canvas="dark", extra_head=
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,700;1,400&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{rel}assets/app.css">{extra_head}
-</head><body class="canvas-{canvas}">
+</head><body class="canvas-{canvas}{' has-sb' if with_sidebar else ''}">
 <div class="topbar">
-  <a class="brand" href="{rel}index.html"><span class="logo">▚</span> Kernel&nbsp;Engineering</a>
-  <button class="menu-btn" onclick="document.body.classList.toggle('sb-open')">☰</button>
+  <a class="brand" href="{rel}index.html"><img class="brand-mark" src="{rel}assets/logo.png" alt="" onerror="this.style.display='none'"><span class="brand-txt">Vizuara <b>Kernel&nbsp;Engineering</b></span></a>
+  <nav class="topnav">{topnav}</nav>
+  {'<button class="menu-btn" onclick="document.body.classList.toggle(&#39;sb-open&#39;)">☰</button>' if with_sidebar else ''}
   <div class="top-links">
-    <button class="tbtn" id="search-open">Search <kbd>⌘K</kbd></button>
+    <button class="tbtn icon" id="search-open" title="Search (⌘K)">⌘K</button>
     <button class="tbtn" id="theme-btn">Terminal</button>
     <a class="tbtn enroll" href="{rel}workshop.html">Enroll →</a>
   </div>
 </div>
-<div class="layout">
-{sidebar(active_slug, rel)}
+<div class="{layout_cls}">
+{sb}
 <main class="content">{main_html}</main>
 </div>
 <div class="search-modal" id="search-modal"><div class="search-box">
@@ -220,7 +228,8 @@ def build_article(a, idx):
 <div class="art-body">{body}</div>
 {nav}
 </article>"""
-    html_out = shell(f"{a['title']} · Kernel Engineering", art, active_slug=slug, rel="../", canvas="paper")
+    html_out = shell(f"{a['title']} · Kernel Engineering", art, active_slug=slug, rel="../",
+                     canvas="paper", with_sidebar=True, active_nav="book")
     (DOCS / "a" / f"{slug}.html").write_text(html_out)
 
 def build_section(sec, rel="../"):
@@ -238,51 +247,40 @@ def build_section(sec, rel="../"):
 <p class="sec-blurb">{esc(sec['blurb'])}</p>
 <div class="idx-list">{''.join(cards)}</div>
 </div>"""
-    html_out = shell(f"{sec['title']} · Kernel Engineering", main, rel=rel, canvas="dark")
+    html_out = shell(f"{sec['title']} · Kernel Engineering", main, rel=rel, canvas="dark",
+                     with_sidebar=True, active_nav="book")
     (DOCS / "s" / f"{sec['id']}.html").write_text(html_out)
 
-def ascii_hero():
-    return r"""      ▟█████▙   ▟███▙   ▟███▙   ▟█████▙
-     ██╱   ╲██ ██╱ ╲██ ██╱ ╲██ ██╱   ╲
-     ██  ▟█ ██ ████▛   ████▛   ██  ▟███
-     ██  ╲█ ██ ██╱ ╲██ ██╱ ╲██ ██  ╲ ██
-      ▜█████▛   ██  ██  ██  ██  ▜█████▛
-     ┌─────────────────────────────────┐
-     │ SM ▘▘▘▘  SM ▘▘▘▘  SM ▘▘▘▘  ×132  │
-     │ ▝▝▝ tensor cores · 989 TF/s bf16 │
-     │ ▓▓▓ HBM3 · 3.35 TB/s · 80 GB     │
-     └─────────────────────────────────┘"""
+AREAS = [
+    ("book.html", "01", "The Book", "The full knowledge base — a 72-chapter illustrated worklog from the silicon up to FlashAttention, NVFP4 and DeepSeek's DSpark. Free to read, forever.",
+     f"{len(FLAT)} chapters · {236} figures"),
+    ("workshop.html", "02", "The Workshop", "Vizuara's live Kernel Engineering cohort: 8 foundational lectures + 6 deep-dive workshops on modern kernel-inference topics, with the full book included.",
+     "8 lectures · 6 workshops"),
+    ("projects.html", "03", "Projects", "Build real kernels with your hands — the GPU-Puzzles track, a GEMM you take to 94% of cuBLAS, FlashAttention from scratch, and the You-vs-the-machine capstone.",
+     "guided builds"),
+    ("interactive.html", "04", "Interactive", "Practice, not just read: per-section quizzes, the guided GPU-Puzzles track, and a growing set of hands-on kernel challenges.",
+     "quizzes · puzzles"),
+]
 
 def build_index():
-    sec_cards = []
-    for sec in MAN["sections"]:
-        items = "".join(f'<li>{esc(a["title"])}</li>' for a in sec["articles"][:4])
-        more = f'<li class="more">+{len(sec["articles"])-4} more →</li>' if len(sec["articles"]) > 4 else ""
-        sec_cards.append(
-            f'<a class="home-sec" href="s/{sec["id"]}.html">'
-            f'<div class="hs-num">{sec["num"]}</div>'
-            f'<div class="hs-title">{esc(sec["title"])}</div>'
-            f'<div class="hs-blurb">{esc(sec["blurb"])}</div>'
-            f'<ul class="hs-list">{items}{more}</ul></a>')
-    start = MAN["sections"][0]["articles"]
-    start_links = "".join(
-        f'<a class="start-link" href="a/{a["slug"]}.html">→ {esc(a["title"])}</a>' for a in start)
-    total = len(FLAT)
+    area_cards = "".join(
+        f'<a class="area" href="{href}"><div class="area-num">{num}</div>'
+        f'<div class="area-title">{esc(title)}</div>'
+        f'<div class="area-blurb">{esc(blurb)}</div>'
+        f'<div class="area-meta">{esc(meta)} <span class="area-go">→</span></div></a>'
+        for href, num, title, blurb, meta in AREAS)
     main = f"""<div class="home">
-<section class="hero">
-  <pre class="ascii">{ascii_hero()}</pre>
-  <div class="hero-txt">
-    <div class="eyebrow">Vizuara AI Labs · knowledge base + live cohort</div>
-    <h1>Write GPU kernels that run <span class="hl">modern LLMs</span>.</h1>
-    <p class="sub">{esc(SITE['tagline'])} A {total}-article worklog from the silicon up to FlashAttention, NVFP4, DeepSeek's DSpark, and AI-generated kernels — each piece measured, profiled, and drawn by hand.</p>
-    <div class="hero-cta">
-      <a class="btn solid" href="workshop.html">The live workshop →</a>
-      <a class="btn" href="a/the-three-regimes.html">Start reading</a>
-    </div>
-    <div class="start-strip">{start_links}</div>
+<section class="hero2">
+  <div class="hero2-logo"><img src="assets/logo.png" alt="Vizuara Kernel Engineering" onerror="this.style.display='none'"></div>
+  <div class="eyebrow">Vizuara AI Labs</div>
+  <h1>Vizuara <span class="hl">Kernel Engineering</span></h1>
+  <p class="sub">{esc(SITE['tagline'])} A worklog from the silicon up to FlashAttention, NVFP4, DeepSeek's DSpark, and AI-generated kernels — every step measured, profiled, and drawn by hand.</p>
+  <div class="hero-cta">
+    <a class="btn solid" href="book.html">Read the book →</a>
+    <a class="btn" href="workshop.html">The workshop</a>
   </div>
 </section>
-<section class="sec-grid">{''.join(sec_cards)}</section>
+<section class="areas">{area_cards}</section>
 <section class="home-foot">
   <div class="skill-pitch">
     <h2>Built around what you're actually hired to do</h2>
@@ -291,7 +289,7 @@ def build_index():
   </div>
 </section>
 </div>"""
-    (DOCS / "index.html").write_text(shell(f"{SITE['title']} · {esc(SITE['tagline'])}", main, rel="", canvas="dark"))
+    (DOCS / "index.html").write_text(shell(f"Vizuara Kernel Engineering · {esc(SITE['tagline'])}", main, rel="", canvas="dark", active_nav=""))
 
 def build_workshop():
     lectures = [
@@ -319,9 +317,9 @@ def build_workshop():
         f'<div class="lec wk"><div class="lec-tag">{t}</div><div><div class="lec-title">{ti}</div>'
         f'<div class="lec-desc">{d}</div></div></div>' for t, ti, d in workshops)
     main = f"""<div class="section-page workshop">
-<div class="crumb">/ the-live-workshop</div>
-<h1 class="sec-h1">The Kernel Engineering Workshop</h1>
-<p class="sec-blurb">Eight live foundational lectures and six deep-dive workshops on modern topics — from the three performance regimes to DeepSeek's DSpark and AI-generated kernels. Enrolled students get the full {len(FLAT)}-article knowledge base, the GPU-Puzzles track, worklog assignments, and the "You vs the machine" capstone.</p>
+<div class="crumb">/ the-workshop</div>
+<h1 class="sec-h1">Vizuara's Kernel Engineering Workshop</h1>
+<p class="sec-blurb">Eight live foundational lectures and six deep-dive workshops on modern topics — from the three performance regimes to DeepSeek's DSpark and AI-generated kernels. Enrolled students get the complete {len(FLAT)}-chapter <a href="book.html">book</a>, the <a href="interactive.html">GPU-Puzzles track and quizzes</a>, the <a href="projects.html">guided projects</a>, worklog assignments, and the "You vs the machine" capstone.</p>
 <h2 class="ws-h2">8 foundational live lectures <span class="ws-sub">2/week · 3 hours each · 4 weeks</span></h2>
 <div class="lec-grid">{lec_html}</div>
 <h2 class="ws-h2">6 deep-dive workshops <span class="ws-sub">modern kernel inference topics</span></h2>
@@ -332,7 +330,133 @@ def build_workshop():
   <p class="ws-note">Questions? <a href="mailto:team@vizuara.com">team@vizuara.com</a></p>
 </div>
 </div>"""
-    (DOCS / "workshop.html").write_text(shell("The Kernel Engineering Workshop · Vizuara", main, rel="", canvas="dark"))
+    (DOCS / "workshop.html").write_text(shell("Vizuara's Kernel Engineering Workshop", main, rel="", canvas="dark", active_nav="workshop"))
+
+def build_book():
+    chapters = []
+    for sec in MAN["sections"]:
+        arts = "".join(
+            f'<a href="a/{a["slug"]}.html" class="ch-art">{esc(a["title"])}'
+            + (f'<span class="chip">{esc(a["chip"])}</span>' if a["chip"] else "") + '</a>'
+            for a in sec["articles"])
+        chapters.append(
+            f'<div class="chapter"><div class="ch-side"><div class="ch-num">{sec["num"]}</div>'
+            f'<a class="ch-title" href="s/{sec["id"]}.html">{esc(sec["title"])}</a>'
+            f'<div class="ch-count">{len(sec["articles"])} chapters ›</div></div>'
+            f'<div class="ch-body"><p class="ch-blurb">{esc(sec["blurb"])}</p>'
+            f'<div class="ch-arts">{arts}</div></div></div>')
+    main = f"""<div class="section-page book-page">
+<div class="crumb">/ the-book</div>
+<h1 class="sec-h1">The Kernel Engineering Book</h1>
+<p class="sec-blurb">The complete, free knowledge base behind Vizuara's Kernel Engineering — {len(FLAT)} illustrated worklog chapters across seven parts, each written in the hypothesis → measure → figure rhythm and cross-linked to the chapters it needs. Start anywhere.</p>
+<a class="btn" href="a/how-to-use-this-site.html" style="margin-bottom:8px;display:inline-block">How to read this book →</a>
+<div class="chapters">{''.join(chapters)}</div>
+</div>"""
+    (DOCS / "book.html").write_text(shell("The Kernel Engineering Book · Vizuara", main, rel="", canvas="dark", active_nav="book"))
+
+PROJECTS = [
+    ("GPU Puzzles: the on-ramp", "beginner", "Solve Sasha Rush's 14 GPU-Puzzles to internalise the one-thread-one-element model, indexing, guards, shared memory and reductions — the fastest way from zero to writing correct kernels.",
+     [("Walkthrough I", "a/gpu-puzzles-walkthrough-1.html"), ("Walkthrough II", "a/gpu-puzzles-walkthrough-2.html")]),
+    ("GEMM to 94% of cuBLAS", "core", "Build matrix-multiply from a 1.3%-of-cuBLAS naive kernel up the full ten-step ladder — coalescing, SMEM tiling, register tiling, vectorization, autotuning, warptiling — profiling every step.",
+     [("Start: Kernel 1 (naive)", "a/gemm-kernel-1-naive.html"), ("The ladder, end to end", "a/gemm-recap-the-ladder.html")]),
+    ("Matmul on tensor cores", "core", "Rebuild GEMM a second time on the tensor cores: wmma fragments, SMEM swizzling to kill bank conflicts, and mma.sync to library-class speed.",
+     [("Tensor cores I: WMMA", "a/tc-kernel-1-wmma-intro.html"), ("Tensor cores III: fast", "a/tc-kernel-3-mma-sync-fast.html")]),
+    ("FlashAttention from scratch", "advanced", "Fuse the whole attention into one kernel with online softmax so the N×N scores never touch HBM — then benchmark it against PyTorch's SDPA.",
+     [("FlashAttention I", "a/flashattention-1.html"), ("Online softmax", "a/softmax-from-scratch.html")]),
+    ("Beat cuBLAS on an H100", "expert", "Assemble TMA, WGMMA and warp specialization into a Hopper GEMM that matches or beats NVIDIA's own library — the full frontier worklog.",
+     [("Beating cuBLAS on H100", "a/beating-cublas-on-h100.html"), ("WGMMA & warp specialization", "a/hopper-wgmma-warp-specialization.html")]),
+    ("You vs. the machine (capstone)", "capstone", "Pick a kernel (SwiGLU, a FlashAttention variant, histogram…), optimize it BY HAND, then run an LLM-in-the-loop against your own kernel and document — CS149 × KernelBench — what each found that the other missed.",
+     [("KernelBench & fast_p", "a/kernelbench-and-fast-p.html"), ("The SwiGLU kernel", "a/swiglu-kernel.html")]),
+    ("Debug a broken kernel", "skill", "Take a kernel with a race, a misaligned vector load and a silent NaN, and hunt each down with compute-sanitizer, user-triggered core dumps, cuda-gdb and nvdisasm — the vLLM workflow.",
+     [("The vLLM debugging workflow", "a/debugging-kernels-vllm-workflow.html")]),
+]
+
+def build_projects():
+    cards = ""
+    for title, level, what, links in PROJECTS:
+        lk = " ".join(f'<a href="{h}">{esc(l)} →</a>' for l, h in links)
+        cards += (f'<div class="proj"><div class="proj-top"><span class="proj-level lvl-{level}">{level}</span></div>'
+                  f'<h3>{esc(title)}</h3><p>{esc(what)}</p><div class="proj-links">{lk}</div></div>')
+    main = f"""<div class="section-page">
+<div class="crumb">/ projects</div>
+<h1 class="sec-h1">Projects</h1>
+<p class="sec-blurb">Reading is not enough — kernels are learned by writing them. Each project is a build you do with your hands, pointed at the exact chapters that carry it. Work top to bottom, or jump to your level. Every one produces something you can put in a worklog and show an employer.</p>
+<div class="proj-grid">{cards}</div>
+<div class="ws-cta">
+  <div class="ws-price">Want these reviewed live and a certificate?</div>
+  <a class="btn solid" href="workshop.html">See Vizuara's Kernel Engineering Workshop →</a>
+</div>
+</div>"""
+    (DOCS / "projects.html").write_text(shell("Projects · Vizuara Kernel Engineering", main, rel="", canvas="dark", active_nav="projects"))
+
+QUIZ = [
+    ("A kernel achieves 4% of the GPU's peak FLOP/s and near-peak HBM bandwidth. What is it?",
+     ["Compute-bound", "Memory-bandwidth-bound", "Overhead-bound"], 1,
+     "Near-peak bandwidth with tiny FLOP utilisation is the signature of a memory-bound kernel — adding faster math won't help."),
+    ("The H100's tensor cores do ~989 TFLOP/s bf16 and HBM3 gives ~3.35 TB/s. Roughly what arithmetic intensity must a kernel exceed to be compute-bound?",
+     ["~3 FLOPs/byte", "~30 FLOPs/byte", "~295 FLOPs/byte"], 2,
+     "989e12 / 3.35e12 ≈ 295 FLOPs per byte — the ridge point. Below it you're memory-bound no matter what."),
+    ("In the GEMM ladder, the jump from naive (1.3%) to 8.5% of cuBLAS comes from…",
+     ["Shared-memory tiling", "Global-memory coalescing", "Tensor cores"], 1,
+     "Kernel 2 is a one-line thread-index remap so a warp reads contiguous columns — coalesced access, ~6× for free."),
+    ("Why must GEMM block over the K dimension when using shared memory?",
+     ["To improve numerical accuracy", "Because SMEM is too small to hold full rows/columns", "To avoid warp divergence"], 1,
+     "SMEM is ~228 KiB; you can't stage whole K-length rows/cols, so you tile K and accumulate across tiles."),
+    ("A float4 / LDS.128 load moves 128 bits per instruction. Its main benefit over four scalar loads is…",
+     ["More total bytes moved", "Fewer instruction issues / transactions for the same bytes", "Higher numerical precision"], 1,
+     "Same bytes, a quarter of the instructions — a win precisely when you're issue-bound, as in kernel 6."),
+    ("On an H100, shared memory has 32 banks. A bank conflict happens when…",
+     ["Two warps use the same SM", "Lanes in a warp hit the same bank but different words", "You exceed 228 KiB of SMEM"], 1,
+     "Multiple lanes addressing different words in the same bank serialise; padding (+1) or swizzling fixes it."),
+    ("Why is LLM decode (one token at a time) usually memory-bound?",
+     ["It runs huge GEMMs", "It re-reads the whole KV cache per step for little math (a GEMV)", "It uses too many registers"], 1,
+     "Decode is a skinny mat-vec dominated by reading the KV cache from HBM — the opposite regime from prefill."),
+    ("FlashAttention's core trick is…",
+     ["Storing the N×N scores in HBM in FP8", "Online softmax so the N×N scores never materialise in HBM", "Skipping the softmax entirely"], 1,
+     "Tiling + online-softmax rescaling fuses attention into one kernel; traffic scales like N·d, not N²."),
+    ("What is new in Hopper (sm_90a) that Ampere lacks?",
+     ["CUDA cores", "TMA, WGMMA, DSMEM and thread-block clusters", "The L2 cache"], 1,
+     "Hopper adds the Tensor Memory Accelerator, warpgroup MMA, distributed shared memory and clusters."),
+    ("DeepSeek-V4-Pro-DSpark is best described as…",
+     ["A brand-new base model", "The V4-Pro checkpoint plus a speculative-decoding module", "A new GPU architecture"], 1,
+     "DSpark is a speculative-decoding module bolted onto V4-Pro — draft tokens verified in parallel; a kernels problem."),
+    ("In Stanford CRFM's AI-generated-kernel experiments, results were…",
+     ["Uniformly superhuman", "Great on some (LayerNorm 484% of PyTorch) but poor on others (FlashAttention 9%)", "Never correct"], 1,
+     "Branching search shone on less-tuned FP32 ops but still trailed badly on hard ones like FlashAttention."),
+    ("Which is the right first move when a kernel hangs and Ctrl-C does nothing?",
+     ["Reboot the machine", "Trigger a user CUDA core dump and open it in cuda-gdb", "Delete the kernel"], 1,
+     "The vLLM workflow: CUDA_ENABLE_USER_TRIGGERED_COREDUMP via a named pipe, then cuda-gdb on the dump."),
+]
+
+def build_interactive():
+    qs = ""
+    for i, (q, opts, correct, exp) in enumerate(QUIZ):
+        obtns = "".join(f'<button class="q-opt" data-i="{j}">{esc(o)}</button>' for j, o in enumerate(opts))
+        qs += (f'<div class="quiz-q" data-correct="{correct}"><div class="q-num">Q{i+1}</div>'
+               f'<div class="q-text">{esc(q)}</div><div class="q-opts">{obtns}</div>'
+               f'<div class="q-exp">{esc(exp)}</div></div>')
+    main = f"""<div class="section-page interactive-page">
+<div class="crumb">/ interactive</div>
+<h1 class="sec-h1">Interactive</h1>
+<p class="sec-blurb">Practice, not just reading. Test yourself against the core ideas, then work the guided GPU-Puzzles track. More hands-on kernel challenges are landing here as the workshop grows.</p>
+
+<div class="int-panel">
+  <div class="int-head"><h2 class="ws-h2">The GPU-Puzzles track</h2></div>
+  <p class="int-p">Fourteen tiny puzzles that build the kernel-writer's instincts — map, zip, guards, broadcasting, shared memory, pooling, dot product, convolution, prefix sum and a first matmul. Do them in the browser, then read our walkthroughs.</p>
+  <div class="int-links">
+    <a class="btn" href="https://github.com/srush/GPU-Puzzles" target="_blank" rel="noopener">Open GPU-Puzzles ↗</a>
+    <a class="btn" href="a/gpu-puzzles-walkthrough-1.html">Walkthrough I →</a>
+    <a class="btn" href="a/gpu-puzzles-walkthrough-2.html">Walkthrough II →</a>
+  </div>
+</div>
+
+<div class="int-panel">
+  <div class="int-head"><h2 class="ws-h2">Quiz yourself</h2><span class="quiz-score" id="quiz-score">0 / {len(QUIZ)}</span></div>
+  <p class="int-p">Twelve questions spanning the regimes, the GEMM ladder, inference kernels and the frontier. Pick an answer to see the explanation.</p>
+  <div class="quiz" data-total="{len(QUIZ)}">{qs}</div>
+</div>
+</div>"""
+    (DOCS / "interactive.html").write_text(shell("Interactive · Vizuara Kernel Engineering", main, rel="", canvas="dark", active_nav="interactive"))
 
 def build_search_index():
     idx = []
@@ -355,8 +479,9 @@ def main():
         build_article(a, i)
     for sec in MAN["sections"]:
         build_section(sec)
-    build_index(); build_workshop(); build_search_index()
-    written = len(FLAT) + len(MAN["sections"]) + 3
+    build_index(); build_book(); build_projects(); build_interactive()
+    build_workshop(); build_search_index()
+    written = len(FLAT) + len(MAN["sections"]) + 6
     have = sum(1 for a in FLAT if (ART / f"{a['slug']}.md").exists())
     print(f"built {written} pages · {len(FLAT)} articles ({have} written, {len(FLAT)-have} stubs) · "
           f"{len(MAN['sections'])} sections")
