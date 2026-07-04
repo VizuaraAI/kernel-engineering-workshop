@@ -1,0 +1,125 @@
+{
+  "site": {
+    "title": "Kernel Engineering",
+    "tagline": "From silicon to speculative decoding — write GPU kernels that actually run modern LLMs.",
+    "domain": "kernelengineering.vizuara.ai",
+    "org": "Vizuara AI Labs",
+    "enroll_url": "#workshop"
+  },
+  "sections": [
+    {
+      "id": "start-here", "num": "00", "title": "Start Here",
+      "blurb": "The mental models. Why kernels decide who wins, how to think in speed-of-light terms, and the exact skill map a GPU kernel engineer is hired for.",
+      "articles": [
+        {"slug": "why-kernels-run-the-world", "title": "Why kernels run the world", "chip": "", "blurb": "Every frontier model is, at the bottom, a pile of hand-tuned kernels. Here is why that layer is the one worth learning."},
+        {"slug": "the-three-regimes", "title": "The three regimes: compute, memory, overhead", "chip": "BRRR", "blurb": "The single most useful mental model in performance: every kernel is bound by compute, memory bandwidth, or overhead. Learn to tell which."},
+        {"slug": "speed-of-light-thinking", "title": "Speed-of-light thinking & the roofline", "chip": "ROOFLINE", "blurb": "Arithmetic intensity, peak FLOPs vs peak bytes, and the roofline that tells you the fastest your kernel could ever be."},
+        {"slug": "the-kernel-engineers-skill-map", "title": "The kernel engineer's skill map", "chip": "CAREER", "blurb": "What hiring managers actually ask for — matmul-from-scratch to CUTLASS to AI-generated kernels — and where this site teaches each."},
+        {"slug": "how-to-use-this-site", "title": "How to use this site", "chip": "", "blurb": "The two surfaces, the worklog style, the async track, and the order to read things in."}
+      ]
+    },
+    {
+      "id": "silicon", "num": "01", "title": "The GPU, From Silicon Up",
+      "blurb": "A tour of the H100/B200 from the die down to the wire. Every component, what it costs, and why it exists — the vocabulary the rest of the site assumes.",
+      "articles": [
+        {"slug": "streaming-multiprocessor", "title": "The Streaming Multiprocessor", "chip": "SM", "blurb": "The unit of GPU compute. Sub-partitions, schedulers, and the on-chip memory that makes or breaks a kernel."},
+        {"slug": "cuda-cores", "title": "CUDA cores & the FP32/INT pipes", "chip": "", "blurb": "The scalar ALUs, what they can and can't do, and why they are no longer where the FLOPs are."},
+        {"slug": "tensor-cores", "title": "Tensor cores", "chip": "TC", "blurb": "The matrix-multiply-accumulate engines that hold ~95% of an H100's FLOPs. Shapes, precisions, and why kernels are written around them."},
+        {"slug": "warp-scheduler", "title": "The warp scheduler & latency hiding", "chip": "", "blurb": "How an SM hides 400-cycle memory latency by juggling dozens of warps — the reason occupancy matters."},
+        {"slug": "register-file", "title": "The register file", "chip": "RMEM", "blurb": "The fastest and most contended memory on the chip. Register pressure, spills, and why 255 is a magic number."},
+        {"slug": "shared-memory-l1", "title": "Shared memory & L1", "chip": "SMEM", "blurb": "The programmable scratchpad that co-lives with L1. 228 KiB, 32 banks, and the single most important optimization surface."},
+        {"slug": "l2-cache", "title": "The L2 cache & partitions", "chip": "L2", "blurb": "60 MiB split across two partitions with a crossbar, data compression, residency control, and near/far latency."},
+        {"slug": "hbm-global-memory", "title": "HBM, global memory & the package", "chip": "HBM", "blurb": "Stacked DRAM, through-silicon vias, the interposer, 3.35 TB/s — and why every kernel is ultimately a memory-traffic problem."},
+        {"slug": "gpc-tpc", "title": "GPCs, TPCs & the chip floorplan", "chip": "GPC", "blurb": "How 132 SMs are grouped, why defective SMs get fused off, and what thread-block clusters buy you."},
+        {"slug": "a100-h100-b200-whatchanged", "title": "A100 → H100 → B200: what changed", "chip": "", "blurb": "TMA, wgmma, DSMEM, FP8, then tcgen05, TMEM and NVFP4 — the architectural deltas that each spawned new kernels."},
+        {"slug": "roofline-model", "title": "The roofline model in practice", "chip": "ROOFLINE", "blurb": "Plotting your kernel on the roofline, reading the ridge point, and knowing when to stop optimizing."},
+        {"slug": "occupancy", "title": "Occupancy: the balancing act", "chip": "", "blurb": "Registers × threads × shared memory → how many warps fit, and why more occupancy is not always faster."},
+        {"slug": "arithmetic-intensity", "title": "Arithmetic intensity", "chip": "AI", "blurb": "FLOPs per byte: the number that decides your regime and the target of every tiling trick."},
+        {"slug": "memory-coalescing", "title": "Memory coalescing", "chip": "", "blurb": "How a warp's 32 loads become one 128-byte transaction — or thirty-two — and what that does to your bandwidth."}
+      ]
+    },
+    {
+      "id": "cuda-model", "num": "02", "title": "The CUDA Programming Model",
+      "blurb": "From the abstract launch to the metal. Threads to grids, the compilation story, and the primitives you build every kernel out of.",
+      "articles": [
+        {"slug": "threads-warps-blocks-grids", "title": "Threads, warps, blocks, grids", "chip": "", "blurb": "The execution hierarchy and how it maps onto SMs, plus the indexing arithmetic you will write a thousand times."},
+        {"slug": "simt-and-divergence", "title": "SIMT & warp divergence", "chip": "", "blurb": "Why 32 threads share a program counter, what happens at an if-statement, and how divergence quietly halves your throughput."},
+        {"slug": "kernel-launch-anatomy", "title": "Anatomy of a kernel launch", "chip": "", "blurb": "Grid/block dims, launch overhead, streams, and what actually happens between <<<>>> and the first instruction."},
+        {"slug": "memory-spaces", "title": "The memory spaces", "chip": "", "blurb": "Global, shared, local, constant, register, texture — the full map, with latencies and when to reach for each."},
+        {"slug": "ptx-vs-sass", "title": "PTX vs SASS: the compilation story", "chip": "PTX", "blurb": "nvcc → PTX → ptxas → SASS. What is virtual, what is real, and why you read SASS to find the truth."},
+        {"slug": "compute-capability", "title": "Compute capability & targeting", "chip": "", "blurb": "sm_90a and friends — how to compile for the right architecture and why the 'a' matters on Hopper."},
+        {"slug": "bank-conflicts", "title": "Shared-memory bank conflicts", "chip": "SMEM", "blurb": "32 banks, the conflict rule, and the padding/swizzling fixes that recover the bandwidth you paid for."},
+        {"slug": "atomics-and-reductions", "title": "Atomics & reductions", "chip": "", "blurb": "Warp-shuffle reductions, atomicAdd, and how to sum a million numbers without serializing your GPU."},
+        {"slug": "streams-and-async", "title": "Streams, events & async", "chip": "", "blurb": "Overlapping copy and compute, cp.async, and the concurrency that keeps the SMs fed."},
+        {"slug": "your-first-kernel", "title": "Your first kernel, end to end", "chip": "", "blurb": "SAXPY to RGB→grayscale: launch config, boundary checks, and benchmarking done right, from scratch."},
+        {"slug": "gpu-puzzles-walkthrough-1", "title": "GPU Puzzles, walkthrough I", "chip": "PRACTICE", "blurb": "Solving the first set of Sasha Rush's GPU Puzzles — map, zip, broadcast, and the mental model of one-thread-one-element."},
+        {"slug": "gpu-puzzles-walkthrough-2", "title": "GPU Puzzles, walkthrough II", "chip": "PRACTICE", "blurb": "Pooling, dot product, convolution and prefix sum — where shared memory and cooperation enter the picture."}
+      ]
+    },
+    {
+      "id": "gemm-worklog", "num": "03", "title": "The GEMM Worklog",
+      "blurb": "The heart of the course. We rebuild matrix multiply from a 1.3%-of-cuBLAS naive kernel to a 94% warptiled monster — one optimization, one measurement, one figure at a time. Then we do it again on tensor cores.",
+      "articles": [
+        {"slug": "gemm-kernel-1-naive", "title": "Kernel 1: Naive", "chip": "1.3%", "blurb": "One thread per output element. The baseline, the profile, and why it leaves 98% of the GPU on the table."},
+        {"slug": "gemm-kernel-2-coalescing", "title": "Kernel 2: Global memory coalescing", "chip": "8.5%", "blurb": "A one-line remap of thread indices that turns 32 scattered loads into one — a 6× win for free."},
+        {"slug": "gemm-kernel-3-shared-memory", "title": "Kernel 3: Shared-memory tiling", "chip": "12.8%", "blurb": "Blocking over K, staging tiles in SMEM, and cutting global-memory traffic by the tile width."},
+        {"slug": "gemm-kernel-4-1d-blocktiling", "title": "Kernel 4: 1D block-tiling", "chip": "36.5%", "blurb": "One thread computes many outputs. Register caching pushes arithmetic intensity past the memory wall."},
+        {"slug": "gemm-kernel-5-2d-blocktiling", "title": "Kernel 5: 2D block-tiling", "chip": "68.7%", "blurb": "A 2D grid of results per thread. Input reuse in registers doubles us again."},
+        {"slug": "gemm-kernel-6-vectorized", "title": "Kernel 6: Vectorized memory access", "chip": "78.4%", "blurb": "float4 / LDS.128 loads. The SASS moment where 8 instructions collapse into 2."},
+        {"slug": "gemm-kernel-7-autotuning", "title": "Kernel 7: Autotuning the tiles", "chip": "84.8%", "blurb": "BM, BN, BK, TM, TN — searching the parameter space instead of guessing it."},
+        {"slug": "gemm-kernel-8-warptiling", "title": "Kernel 8: Warptiling", "chip": "93.7%", "blurb": "Making every level of parallelism explicit — block, warp, thread — to reach cuBLAS territory."},
+        {"slug": "gemm-double-buffering-cpasync", "title": "Double buffering & cp.async", "chip": "", "blurb": "Overlapping the next tile's load with this tile's math to hide the memory latency entirely."},
+        {"slug": "gemm-cublas-baseline", "title": "What cuBLAS is actually doing", "chip": "", "blurb": "The black box we've been chasing: heuristics, split-K, and why the last 6% is so hard."},
+        {"slug": "gemm-benchmark-methodology", "title": "Benchmarking without lying to yourself", "chip": "", "blurb": "Warmup, clocks, L2 flushing, and reporting TFLOP/s honestly — the discipline that makes the whole ladder trustworthy."},
+        {"slug": "gemm-recap-the-ladder", "title": "The ladder, end to end", "chip": "RECAP", "blurb": "All ten kernels on one roofline, the speedups stacked, and the general principles that transfer to any kernel."},
+        {"slug": "tc-kernel-1-wmma-intro", "title": "Tensor cores I: the WMMA GEMM", "chip": "TC", "blurb": "Rebuilding matmul on tensor cores from scratch (after alexarmbr): fragments, the mma shape, and a first working kernel."},
+        {"slug": "tc-kernel-2-fragments-swizzling", "title": "Tensor cores II: fragments & swizzling", "chip": "TC", "blurb": "Register-fragment layouts, SMEM swizzling to kill bank conflicts on the tensor-core path, and the profile that proves it."},
+        {"slug": "tc-kernel-3-mma-sync-fast", "title": "Tensor cores III: to cuBLAS speed", "chip": "TC", "blurb": "mma.sync, double-buffered pipelines and the precision menu — a tensor-core GEMM that rivals the library."}
+      ]
+    },
+    {
+      "id": "inference", "num": "04", "title": "Kernels for Inference",
+      "blurb": "Where the GEMM skills meet real LLMs. Fusion, softmax, attention, FlashAttention, the KV cache and the quantized kernels that serve tokens at scale.",
+      "articles": [
+        {"slug": "prefill-vs-decode", "title": "Prefill vs decode: two different machines", "chip": "", "blurb": "Why the compute-bound prefill (GEMM) and the memory-bound decode (GEMV) demand completely different kernels."},
+        {"slug": "operator-fusion", "title": "Operator fusion", "chip": "", "blurb": "The highest-leverage inference optimization: stop round-tripping tensors through HBM between elementwise ops."},
+        {"slug": "softmax-from-scratch", "title": "Softmax from scratch (and online)", "chip": "", "blurb": "The numerically-stable, single-pass, online softmax — the trick that makes FlashAttention possible."},
+        {"slug": "rmsnorm-from-scratch", "title": "RMSNorm & LayerNorm kernels", "chip": "", "blurb": "Reduction + normalize + affine, fused into one pass — the workhorse normalization of modern LLMs."},
+        {"slug": "attention-naive", "title": "Attention, the naive way", "chip": "", "blurb": "QKᵀ → softmax → V as three kernels, its O(N²) HBM traffic, and why that is the problem to solve."},
+        {"slug": "flashattention-1", "title": "FlashAttention I: tiling attention", "chip": "FA", "blurb": "Fusing the whole attention into one kernel with online softmax so the N×N scores never touch HBM."},
+        {"slug": "flashattention-2", "title": "FlashAttention II: better work partitioning", "chip": "FA2", "blurb": "Rebalancing work across warps and the sequence dimension for a ~2× step over FA1."},
+        {"slug": "flashattention-3", "title": "FlashAttention III: Hopper & async", "chip": "FA3", "blurb": "Warp specialization, TMA and FP8 on Hopper — attention at the hardware's speed of light."},
+        {"slug": "kv-cache-and-paged-attention", "title": "The KV cache & PagedAttention", "chip": "", "blurb": "Why decode is memory-bound, how paging fixes fragmentation, and the kernel that reads a paged cache."},
+        {"slug": "quantization-kernels-fp8-int4", "title": "Quantization kernels: FP8, INT4, W4A16", "chip": "FP8", "blurb": "Dequantize-in-the-kernel, scale handling, and the low-precision matmuls that halve or quarter memory traffic."},
+        {"slug": "swiglu-kernel", "title": "The SwiGLU kernel", "chip": "", "blurb": "Gate × up × SiLU fused — a small kernel that shows up in every transformer MLP and every kernel benchmark."},
+        {"slug": "batched-decode-matvec", "title": "Batched decode: the GEMV problem", "chip": "", "blurb": "Serving many sequences one token at a time: skinny matmuls, memory-bound reality, and how batching helps."}
+      ]
+    },
+    {
+      "id": "frontier", "num": "05", "title": "The Frontier",
+      "blurb": "The cutting edge, as of now. Hopper's async engine, Blackwell's tensor memory and NVFP4, DeepSeek's open kernels, CUTLASS the hard way, and how to debug when it all breaks.",
+      "articles": [
+        {"slug": "hopper-tma", "title": "Hopper's TMA: async bulk copy", "chip": "TMA", "blurb": "The Tensor Memory Accelerator: hardware-managed multidimensional copies that free the threads to compute."},
+        {"slug": "hopper-wgmma-warp-specialization", "title": "WGMMA & warp specialization", "chip": "WGMMA", "blurb": "Warpgroup matmul and the producer/consumer pattern that keeps the tensor cores saturated on Hopper."},
+        {"slug": "beating-cublas-on-h100", "title": "Beating cuBLAS on an H100", "chip": "WORKLOG", "blurb": "A full worklog (after hamzaelshafie & cudaforfun) that assembles TMA + wgmma + warp specialization into a library-beating GEMM."},
+        {"slug": "blackwell-tcgen05-tmem", "title": "Blackwell: tcgen05 & tensor memory", "chip": "B200", "blurb": "The 5th-gen tensor cores, the new Tensor Memory (TMEM), and CTA pairs — a different machine to write for."},
+        {"slug": "nvfp4-microscaling", "title": "NVFP4 & microscaling formats", "chip": "NVFP4", "blurb": "e2m1 with FP8 block scales, and the hackathon journey from a 2000µs to a 22µs FP4 GEMV."},
+        {"slug": "deepseek-flashmla-deepgemm", "title": "DeepSeek's open kernels: FlashMLA & DeepGEMM", "chip": "", "blurb": "MLA decode, FP8 MoE GEMMs and the DeepGEMM backend — production kernels behind a frontier model."},
+        {"slug": "deepseek-dspark-speculative", "title": "DSpark: speculative decoding as a kernel problem", "chip": "DSPARK", "blurb": "V4-Pro's speculative-decoding module — draft passes, parallel verification, acceptance kernels, and CSA/HCA sparse attention."},
+        {"slug": "cutlass-the-hard-way", "title": "CUTLASS the hard way", "chip": "CUTLASS", "blurb": "From a naive GEMM to a real CUTLASS kernel (after kapilsh) — reading library-grade warptiling with our own vocabulary."},
+        {"slug": "cute-dsl-tilelang", "title": "CuTe, the DSL landscape & Triton", "chip": "", "blurb": "Layouts and tensors in CuTe, Triton in 40 lines, TileLang — the abstractions above raw CUDA and when to use them."},
+        {"slug": "debugging-kernels-vllm-workflow", "title": "Debugging kernels: the vLLM workflow", "chip": "DEBUG", "blurb": "compute-sanitizer, user-triggered core dumps, cuda-gdb, -lineinfo and nvdisasm — finding the illegal access at 3am."}
+      ]
+    },
+    {
+      "id": "ai-kernels", "num": "06", "title": "AI × Kernels",
+      "blurb": "The newest frontier: can models write the kernels? KernelBench, test-time search, RL, and the honest picture of where AI-generated kernels win and where they still fail.",
+      "articles": [
+        {"slug": "kernelbench-and-fast-p", "title": "KernelBench & measuring AI kernels", "chip": "", "blurb": "The benchmark, the fast_p metric, and why 'correct and faster than PyTorch' is a surprisingly hard bar."},
+        {"slug": "test-time-scaling-and-search", "title": "Monkeys & search: test-time scaling", "chip": "", "blurb": "Sampling 100 kernels, iterative feedback, and evolutionary/tree search — how DeepSeek-V3 went 4% → 72%."},
+        {"slug": "crfm-fast-kernels-experiments", "title": "The CRFM experiments", "chip": "", "blurb": "Natural-language optimization ideas + parallel branching: LayerNorm at 484% of PyTorch — and FlashAttention at 9%."},
+        {"slug": "kevin-rl-and-kernelbook", "title": "Kevin, RL & what's still human", "chip": "", "blurb": "Multi-turn RL with verifiable rewards, the KernelBook dataset, and why the human+AI+profiler loop is the real answer."}
+      ]
+    }
+  ]
+}
