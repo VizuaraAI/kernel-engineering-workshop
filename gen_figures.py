@@ -17,6 +17,7 @@ from google.genai import types
 
 ROOT = pathlib.Path(__file__).parent
 ART = ROOT / "articles"
+MENTOR = ROOT / "mentor"
 OUT = ROOT / "docs" / "figures"; OUT.mkdir(parents=True, exist_ok=True)
 KEY = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
 if not KEY:
@@ -61,7 +62,8 @@ def collect():
     only = None
     if "--only" in sys.argv:
         only = sys.argv[sys.argv.index("--only") + 1]
-    for md in sorted(ART.glob("*.md")):
+    srcs = sorted(list(ART.glob("*.md")) + (list(MENTOR.glob("*.md")) if MENTOR.exists() else []))
+    for md in srcs:
         slug = md.stem
         if only and slug != only:
             continue

@@ -18,6 +18,12 @@ DOCS = ROOT / "docs"
 ART = ROOT / "articles"
 MAN = json.loads((ROOT / "manifest.json").read_text())
 SITE = MAN["site"]
+MENTOR = json.loads((ROOT / "mentor_manifest.json").read_text())
+MENTOR_DIR = ROOT / "mentor"
+MFLAT = []
+for _p in MENTOR["parts"]:
+    for _c in _p["chapters"]:
+        MFLAT.append({**_c, "part_id": _p["id"], "part_num": _p["num"], "part_title": _p["title"]})
 
 # ----- flatten article order for prev/next + lookups -----
 FLAT = []
@@ -75,6 +81,26 @@ def md_to_html(md, slug):
                 buf.append(lines[i]); i += 1
             i += 1
             out.append(f'<pre class="code" data-lang="{esc(lang)}"><code>{esc(chr(10).join(buf))}</code></pre>')
+            continue
+        # callout note  [[note: TYPE || content]]
+        if line.strip().startswith("[[note:"):
+            buf = [line]
+            while "]]" not in buf[-1] and i + 1 < n:
+                i += 1; buf.append(lines[i])
+            i += 1
+            raw = " ".join(buf).strip()
+            mm = re.match(r"\[\[note:\s*(\w+)\s*\|\|\s*(.+?)\]\]\s*$", raw, flags=re.S)
+            if mm:
+                typ = mm.group(1).lower(); content = inline(mm.group(2).strip(), ctx)
+            else:
+                typ = "teach"; content = inline(raw[7:].strip().rstrip("]").strip(), ctx)
+            cmeta = {"metaphor": ("🧠", "Metaphor"), "example": ("🔢", "By hand"),
+                     "production": ("🏭", "In production today"), "teach": ("🎓", "Teaching note"),
+                     "say": ("🎤", "Say this at the board"), "demo": ("▶️", "Live demo"),
+                     "confusion": ("⚠️", "Where students trip"), "aha": ("✨", "The click")}
+            icon, label = cmeta.get(typ, ("🎓", "Note"))
+            out.append(f'<div class="cal cal-{typ}"><div class="cal-h"><span class="cal-i">{icon}</span> {label}</div>'
+                       f'<div class="cal-b">{content}</div></div>')
             continue
         # figure (own line/block, may span lines until closing ]])
         if line.strip().startswith("[[fig:"):
@@ -163,12 +189,16 @@ def sidebar(active_slug, rel):
     return '<nav class="sidebar" id="sidebar">' + "".join(rows) + "</nav>"
 
 def shell(title, main_html, active_slug=None, rel="", canvas="dark", extra_head="",
-          with_sidebar=False, active_nav=""):
+          with_sidebar=False, active_nav="", sb_kind="book"):
     def nl(href, label, key):
         return f'<a class="tn{" active" if key==active_nav else ""}" href="{rel}{href}">{label}</a>'
     topnav = (nl("book.html", "The Book", "book") + nl("workshop.html", "Workshop", "workshop")
-              + nl("projects.html", "Projects", "projects") + nl("interactive.html", "Interactive", "interactive"))
-    sb = sidebar(active_slug, rel) if with_sidebar else ""
+              + nl("projects.html", "Projects", "projects") + nl("interactive.html", "Interactive", "interactive")
+              + nl("mentor/index.html", "Mentor Guide", "mentor"))
+    if with_sidebar:
+        sb = mentor_sidebar(active_slug, rel) if sb_kind == "mentor" else sidebar(active_slug, rel)
+    else:
+        sb = ""
     layout_cls = "layout" if with_sidebar else "layout nosb"
     return f"""<!doctype html><html lang="en" data-theme="terminal"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
@@ -458,11 +488,76 @@ def build_interactive():
 </div>"""
     (DOCS / "interactive.html").write_text(shell("Interactive · Vizuara Kernel Engineering", main, rel="", canvas="dark", active_nav="interactive"))
 
+def mentor_sidebar(active_slug, rel):
+    rows = [f'<a class="sb-home" href="{rel}mentor/index.html">‹ mentor handbook</a>']
+    for part in MENTOR["parts"]:
+        open_p = any(c["slug"] == active_slug for c in part["chapters"])
+        rows.append(f'<details class="sb-sec"{" open" if open_p else ""}>')
+        rows.append(f'<summary><span class="sb-num">{part["num"]}</span> {esc(part["title"])}</summary>')
+        for c in part["chapters"]:
+            act = " active" if c["slug"] == active_slug else ""
+            rows.append(f'<a class="sb-item{act}" href="{rel}mentor/{c["slug"]}.html">{esc(c["title"])}</a>')
+        rows.append("</details>")
+    return '<nav class="sidebar" id="sidebar">' + "".join(rows) + "</nav>"
+
+def build_mentor_chapter(ch, idx):
+    slug = ch["slug"]
+    p = MENTOR_DIR / f"{slug}.md"
+    if p.exists():
+        body = md_to_html(p.read_text(), slug); stub = ""
+    else:
+        body = (f'<p class="lead">{esc(ch["blurb"])}</p><div class="stub">This handbook chapter is being '
+                f'written — it will teach this from scratch with metaphors, a live-demo plan, and figures.</div>')
+        stub = " stub"
+    prev_c = MFLAT[idx-1] if idx > 0 else None
+    next_c = MFLAT[idx+1] if idx < len(MFLAT)-1 else None
+    nav = '<div class="prevnext">'
+    nav += (f'<a class="pn prev" href="{prev_c["slug"]}.html"><span>‹ previous</span>{esc(prev_c["title"])}</a>'
+            if prev_c else '<span></span>')
+    nav += (f'<a class="pn next" href="{next_c["slug"]}.html"><span>next ›</span>{esc(next_c["title"])}</a>'
+            if next_c else '<span></span>')
+    nav += "</div>"
+    art = f"""<article class="worklog mentor{stub}">
+<div class="art-kicker"><span class="art-sec">Mentor Handbook · {ch['part_num']} {esc(ch['part_title'])}</span></div>
+<h1 class="art-title">{esc(ch['title'])}</h1>
+<div class="art-body">{body}</div>
+{nav}
+</article>"""
+    html_out = shell(f"{ch['title']} · Mentor Handbook", art, active_slug=slug, rel="../",
+                     canvas="paper", with_sidebar=True, active_nav="mentor", sb_kind="mentor")
+    (DOCS / "mentor" / f"{slug}.html").write_text(html_out)
+
+def build_mentor_index():
+    parts = []
+    for part in MENTOR["parts"]:
+        chs = "".join(
+            f'<a href="{c["slug"]}.html" class="ch-art">{esc(c["title"])}</a>' for c in part["chapters"])
+        parts.append(
+            f'<div class="chapter"><div class="ch-side"><div class="ch-num">{part["num"]}</div>'
+            f'<div class="ch-title">{esc(part["title"])}</div>'
+            f'<div class="ch-count">{len(part["chapters"])} chapters</div></div>'
+            f'<div class="ch-body"><p class="ch-blurb">{esc(part["blurb"])}</p>'
+            f'<div class="ch-arts">{chs}</div></div></div>')
+    total = len(MFLAT)
+    main = f"""<div class="section-page book-page mentor-index">
+<div class="crumb">/ mentor-handbook</div>
+<div class="mentor-badge">For mentors · Dr. Raj Dandekar &amp; Shubham Panchal</div>
+<h1 class="sec-h1">The Mentor's Handbook</h1>
+<p class="sec-blurb">{esc(MENTOR['subtitle'])} Every chapter teaches the idea from the ground up — plain words, a metaphor, a by-hand example, the real math, where it runs in production today, and a minute-by-minute plan for teaching it. Read it in order; by the end you can deliver the entire workshop. {total} chapters.</p>
+<a class="btn" href="mg-how-to-use-this-guide.html" style="margin-bottom:6px;display:inline-block">Start: how to use this handbook →</a>
+<div class="chapters">{''.join(parts)}</div>
+</div>"""
+    (DOCS / "mentor" / "index.html").write_text(shell("The Mentor's Handbook · Vizuara Kernel Engineering",
+        main, rel="../", canvas="dark", active_nav="mentor"))
+
 def build_search_index():
     idx = []
     for a in FLAT:
         idx.append({"t": a["title"], "s": a["slug"], "sec": a["section_title"],
                     "chip": a["chip"], "b": a["blurb"], "u": f"a/{a['slug']}.html"})
+    for c in MFLAT:
+        idx.append({"t": c["title"], "s": c["slug"], "sec": "Mentor Handbook · " + c["part_title"],
+                    "chip": "MENTOR", "b": c["blurb"], "u": f"mentor/{c['slug']}.html"})
     (DOCS / "search.json").write_text(json.dumps(idx, ensure_ascii=False))
 
 # ============================================================ main
@@ -479,12 +574,17 @@ def main():
         build_article(a, i)
     for sec in MAN["sections"]:
         build_section(sec)
+    (DOCS / "mentor").mkdir(parents=True, exist_ok=True)
+    for i, c in enumerate(MFLAT):
+        build_mentor_chapter(c, i)
+    build_mentor_index()
     build_index(); build_book(); build_projects(); build_interactive()
     build_workshop(); build_search_index()
-    written = len(FLAT) + len(MAN["sections"]) + 6
+    written = len(FLAT) + len(MAN["sections"]) + len(MFLAT) + 7
     have = sum(1 for a in FLAT if (ART / f"{a['slug']}.md").exists())
-    print(f"built {written} pages · {len(FLAT)} articles ({have} written, {len(FLAT)-have} stubs) · "
-          f"{len(MAN['sections'])} sections")
+    mhave = sum(1 for c in MFLAT if (MENTOR_DIR / f"{c['slug']}.md").exists())
+    print(f"built {written} pages · {len(FLAT)} articles ({have} written) · "
+          f"{len(MFLAT)} mentor chapters ({mhave} written) · {len(MAN['sections'])} sections")
 
 if __name__ == "__main__":
     main()

@@ -1,0 +1,86 @@
+{
+  "title": "The Mentor's Handbook",
+  "subtitle": "Teaching Kernel Engineering — everything a mentor must learn, from matrix multiplication up, to deliver the workshop.",
+  "for": "Dr. Raj Dandekar & Shubham Panchal",
+  "parts": [
+    {
+      "id": "before-you-teach", "num": "00", "title": "Before You Teach",
+      "blurb": "The mentor's mindset, how to use this handbook, and the single story that connects all fourteen sessions so you always know where you are.",
+      "chapters": [
+        {"slug": "mg-how-to-use-this-guide", "title": "How to use this handbook", "blurb": "The seven ingredients in every chapter, how to read it (learn first, then teach), and how to prep a session from it."},
+        {"slug": "mg-the-mentors-mindset", "title": "The mentor's mindset: teaching hard things simply", "blurb": "You only truly understand something when you can teach it to a beginner. How to build from zero, use metaphors, and turn abstraction into arithmetic on a whiteboard."},
+        {"slug": "mg-the-whole-arc", "title": "The whole arc: one story, fourteen sessions", "blurb": "The single narrative — 'make the matmul fast, then make the model fast' — that ties every lecture and workshop together, drawn as one map."}
+      ]
+    },
+    {
+      "id": "foundations", "num": "01", "title": "Foundations You Must Feel",
+      "blurb": "The bedrock. Matrix multiplication from the absolute beginning, why it is the whole game, what 'fast' really means, and the compute-vs-memory idea that governs everything. Feel these in your bones before anything else.",
+      "chapters": [
+        {"slug": "mg-matmul-from-scratch", "title": "Matrix multiplication, from the absolute beginning", "blurb": "Dot products, the shape dance, a 2×2 by hand, then why C = A·B is three nested loops. The one operation everything else optimizes."},
+        {"slug": "mg-why-matmul-is-everything", "title": "Why matrix multiply is the whole game", "blurb": "Every linear layer, attention score, and MLP is a matmul. Trace a transformer and count the matmuls. This is why kernels matter."},
+        {"slug": "mg-what-fast-means", "title": "What 'fast' actually means: time, FLOPs, bytes", "blurb": "Operations, floating-point ops per second, bytes moved, and why a stopwatch is not enough. The units a mentor must own."},
+        {"slug": "mg-compute-vs-memory", "title": "Compute vs memory: the kitchen that governs everything", "blurb": "The three regimes (compute / memory / overhead) told as a kitchen story — cooking vs fetching ingredients. The master mental model."},
+        {"slug": "mg-numbers-to-know-cold", "title": "The numbers to know cold", "blurb": "989 TFLOP/s, 3.35 TB/s, 132 SMs, 228 KiB, 32 threads. The handful of H100 numbers that turn hand-waving into intuition."},
+        {"slug": "mg-the-roofline-simply", "title": "The roofline, drawn simply", "blurb": "The one plot that says the fastest your kernel could ever go — a ceiling of compute and a ramp of memory — explained without intimidation."}
+      ]
+    },
+    {
+      "id": "the-machine", "num": "02", "title": "The Machine",
+      "blurb": "What a GPU actually is, taught with pictures. Threads and warps, the memory hierarchy, tensor cores, and latency hiding — the vocabulary and intuition students need before any code.",
+      "chapters": [
+        {"slug": "mg-cpu-vs-gpu", "title": "CPU vs GPU: the chef and the cafeteria", "blurb": "A few brilliant chefs versus a thousand line cooks. Why GPUs trade cleverness for overwhelming parallelism, and when that wins."},
+        {"slug": "mg-threads-warps-blocks", "title": "Threads, warps & blocks: the marching band", "blurb": "One thread = one musician; a warp of 32 marches in lockstep; blocks share a room. The execution hierarchy as a parade."},
+        {"slug": "mg-the-memory-hierarchy", "title": "The memory hierarchy: your desk, drawers, shelves, warehouse", "blurb": "Registers, shared memory, L2, HBM as distances you walk for a tool. Why the whole craft is keeping data close."},
+        {"slug": "mg-tensor-cores-simply", "title": "Tensor cores: the matmul machine inside the machine", "blurb": "A special unit that eats little matrices whole. Where 95% of the FLOPs live and why modern kernels are built around it."},
+        {"slug": "mg-latency-hiding", "title": "Latency hiding: the short-order cook juggling tickets", "blurb": "Memory is slow, so the GPU keeps dozens of jobs in flight and always works on a ready one. Why 'occupancy' matters."},
+        {"slug": "mg-coalescing-simply", "title": "Coalescing: everybody boards the same bus", "blurb": "When 32 threads read neighbouring addresses, the hardware fetches them in one trip. Scattered reads waste the bus. The cheapest big win."}
+      ]
+    },
+    {
+      "id": "teach-gemm", "num": "03", "title": "Teaching the GEMM Ladder",
+      "blurb": "The heart of the course, session by session. For each rung of the ladder: the idea in plain words, the metaphor, the board work, the live demo, the number, and where students trip.",
+      "chapters": [
+        {"slug": "mg-teach-naive-gemm", "title": "Teaching Kernel 1: the honest, slow start", "blurb": "One thread per output. How to run it, show it hitting 1.3% of cuBLAS, and make students hungry to fix it."},
+        {"slug": "mg-teach-coalescing", "title": "Teaching Kernel 2: the one-line miracle", "blurb": "Remap two indices, 6× faster. How to build the suspense and the reveal, and draw the coalesced vs scattered bus."},
+        {"slug": "mg-teach-shared-memory-tiling", "title": "Teaching Kernel 3: the shared whiteboard", "blurb": "Stage tiles in shared memory so the block reuses them. The reuse idea, drawn, and why we block over K."},
+        {"slug": "mg-teach-register-tiling", "title": "Teaching Kernels 4–5: pockets full of work", "blurb": "Each thread computes many outputs from values held in registers. 1D then 2D tiling, and the arithmetic-intensity climb to 68.7%."},
+        {"slug": "mg-teach-vectorization", "title": "Teaching Kernel 6: carry four boxes at once", "blurb": "float4 loads and the SASS 'eight loads become two' moment — the most satisfying reveal in the course."},
+        {"slug": "mg-teach-warptiling", "title": "Teaching Kernels 7–8: the org chart", "blurb": "Autotuning and warptiling — making block, warp, and thread explicit to reach 94% of cuBLAS. How to land the finale."},
+        {"slug": "mg-teach-tensor-core-gemm", "title": "Teaching the tensor-core rebuild", "blurb": "Do the ladder again on tensor cores: fragments, swizzling, mma.sync. How to teach WMMA without drowning students."}
+      ]
+    },
+    {
+      "id": "teach-inference", "num": "04", "title": "Teaching Inference Kernels",
+      "blurb": "Where the GEMM skills meet real LLMs. Fusion, softmax, attention and FlashAttention, and why chatting with a model is a memory problem — all in teachable pictures.",
+      "chapters": [
+        {"slug": "mg-teach-fusion", "title": "Teaching fusion: stop driving to the warehouse", "blurb": "Why round-tripping tensors through HBM between tiny ops is the waste that fusion removes. The single biggest inference win."},
+        {"slug": "mg-teach-softmax-online", "title": "Teaching softmax & the online trick", "blurb": "Stable softmax by hand, then the running-max/running-sum trick that makes FlashAttention possible. Teach it as a running average."},
+        {"slug": "mg-teach-attention", "title": "Teaching attention as three matmuls", "blurb": "QKᵀ → softmax → V, and why the giant N×N scores are the problem. Set up FlashAttention as the fix."},
+        {"slug": "mg-teach-flashattention", "title": "Teaching FlashAttention: never write the scores down", "blurb": "Streaming attention in tiles so the N×N matrix never touches memory. The metaphor, the tiling, and the production stakes."},
+        {"slug": "mg-teach-kv-cache-decode", "title": "Teaching the KV cache: why chat is memory-bound", "blurb": "Prefill vs decode, the KV cache, and why generating each token re-reads a growing memory. PagedAttention as the fix."}
+      ]
+    },
+    {
+      "id": "teach-frontier", "num": "05", "title": "Teaching the Frontier",
+      "blurb": "So you sound current and credible. Hopper and Blackwell in plain words, DeepSeek's real kernels, AI that writes kernels, and how to debug — each tied to what shipped this year.",
+      "chapters": [
+        {"slug": "mg-teach-hopper", "title": "Teaching Hopper: the async delivery truck (TMA & WGMMA)", "blurb": "How the H100 added a hardware copy engine and warpgroup matmul, in words a student can hold. Why FlashAttention-3 needs it."},
+        {"slug": "mg-teach-blackwell-nvfp4", "title": "Teaching Blackwell & NVFP4: four-bit numbers that work", "blurb": "Tensor memory, and micro-scaled 4-bit formats. The 2000µs→22µs hackathon story as your hook."},
+        {"slug": "mg-teach-deepseek-dspark", "title": "Teaching DeepSeek & DSpark: kernels behind a frontier model", "blurb": "FlashMLA, DeepGEMM, and DSpark = speculative decoding. How an open lab ships its own kernels — the ultimate production link."},
+        {"slug": "mg-teach-ai-writes-kernels", "title": "Teaching AI that writes kernels", "blurb": "KernelBench, the 'monkeys' that sample 100 kernels, and the honest wins-and-failures. The human+AI+profiler loop — and the tie to harnesses."},
+        {"slug": "mg-teach-debugging", "title": "Teaching debugging: war stories that stick", "blurb": "The race, the misaligned load, the silent NaN. compute-sanitizer, core dumps and cuda-gdb — taught as detective stories."}
+      ]
+    },
+    {
+      "id": "delivery", "num": "06", "title": "Delivery Craft",
+      "blurb": "Turning understanding into a great live session. Minute-by-minute plans for all eight lectures and six workshops, the questions students always ask, and how to run the capstone.",
+      "chapters": [
+        {"slug": "mg-lecture-plans-l1-l4", "title": "Lecture plans: L1–L4, minute by minute", "blurb": "Timings, board sequence, the one demo, and the checkpoint questions for the first four lectures."},
+        {"slug": "mg-lecture-plans-l5-l8", "title": "Lecture plans: L5–L8, minute by minute", "blurb": "The GEMM finale, tensor cores, profiling/debugging, and attention — paced for a three-hour room."},
+        {"slug": "mg-workshop-plans-w1-w6", "title": "Workshop plans: the six deep-dives", "blurb": "FlashAttention, Hopper, the abstraction ladder, serving kernels, Blackwell/NVFP4, and the DeepSeek+AI finale — how to run each hands-on."},
+        {"slug": "mg-student-questions", "title": "The questions students always ask (with crisp answers)", "blurb": "A ready bank of the recurring questions and the tight, correct answers so you're never caught flat."},
+        {"slug": "mg-running-the-capstone", "title": "Running the 'You vs the machine' capstone", "blurb": "How to set up, mentor, and grade the by-hand-plus-LLM kernel capstone on the worklog, not the raw speedup."}
+      ]
+    }
+  ]
+}
