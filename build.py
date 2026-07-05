@@ -354,10 +354,23 @@ def build_workshop():
 <div class="lec-grid">{lec_html}</div>
 <h2 class="ws-h2">6 deep-dive workshops <span class="ws-sub">modern kernel inference topics</span></h2>
 <div class="lec-grid">{wk_html}</div>
+
+<section id="partners" class="partners">
+  <div class="eyebrow">For companies &amp; partners</div>
+  <h2 class="ws-h2" style="margin-top:6px">Hire our graduates. Partner on the frontier.</h2>
+  <p class="int-p">Kernel engineers are one of the hardest hires in AI. By the end of a cohort, our graduates have built a GEMM from naive to <b style="color:var(--lime)">94% of cuBLAS</b>, FlashAttention from scratch, Hopper &amp; Blackwell kernels (TMA, WGMMA, NVFP4), and DeepSeek-grade inference kernels. Three ways to work with us:</p>
+  <div class="proj-grid">
+    <div class="proj"><div class="proj-top"><span class="proj-level lvl-capstone">hiring</span></div><h3>A hiring pipeline</h3><p>Consider the strongest of each cohort for your kernel-engineering roles: a warm, pre-vetted pool of engineers with exactly the skills on your job descriptions.</p></div>
+    <div class="proj"><div class="proj-top"><span class="proj-level lvl-capstone">capstone</span></div><h3>Sponsor a capstone</h3><p>Give us a real kernel problem your team cares about. We run it as a sponsored capstone, you see the solutions and the talent, and your company is credited on the project.</p></div>
+    <div class="proj"><div class="proj-top"><span class="proj-level lvl-capstone">compute</span></div><h3>GPU credits &amp; partnership</h3><p>Sponsor H100/B200 hours for students' capstone work and become a founding partner, with your logo on the workshop, the site, and the certificate.</p></div>
+  </div>
+  <div class="partners-strip"><span class="ps-label">Founding partners</span><span class="ps-soon">— announced soon —</span></div>
+</section>
+
 <div class="ws-cta">
-  <div class="ws-price">Dates &amp; pricing announced soon</div>
-  <a class="btn solid" href="mailto:team@vizuara.com?subject=Kernel%20Engineering%20Workshop">Get notified / enquire →</a>
-  <p class="ws-note">Questions? <a href="mailto:team@vizuara.com">team@vizuara.com</a></p>
+  <div class="ws-price">Partner with the world's first Kernel Engineering Workshop</div>
+  <a class="btn solid" href="mailto:team@vizuara.com?subject=Kernel%20Engineering%20Workshop%20partnership&amp;body=Hi%20Raj%2C">Partner with us →</a>
+  <p class="ws-note">Raj Dandekar, Co-founder &amp; CEO · <a href="mailto:team@vizuara.com">team@vizuara.com</a> · dates &amp; pricing announced soon</p>
 </div>
 </div>"""
     (DOCS / "workshop.html").write_text(shell("Vizuara's Kernel Engineering Workshop", main, rel="", canvas="dark", active_nav="workshop"))
