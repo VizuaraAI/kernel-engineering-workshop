@@ -194,7 +194,8 @@ def shell(title, main_html, active_slug=None, rel="", canvas="dark", extra_head=
         return f'<a class="tn{" active" if key==active_nav else ""}" href="{rel}{href}">{label}</a>'
     topnav = (nl("book.html", "The Book", "book") + nl("workshop.html", "Workshop", "workshop")
               + nl("projects.html", "Projects", "projects") + nl("interactive.html", "Interactive", "interactive")
-              + nl("mentor/index.html", "Mentor Guide", "mentor"))
+              + nl("mentor/index.html", "Mentor Guide", "mentor")
+              + nl("workshop.html#partners", "Partner", "partner"))
     if with_sidebar:
         sb = mentor_sidebar(active_slug, rel) if sb_kind == "mentor" else sidebar(active_slug, rel)
     else:
@@ -315,7 +316,10 @@ def build_index():
   <div class="skill-pitch">
     <h2>Built around what you're actually hired to do</h2>
     <p>Matmul from scratch to <strong>94% of cuBLAS</strong> · the same ladder on tensor cores · reading SASS &amp; Nsight Compute · TMA/WGMMA on Hopper · NVFP4 &amp; TMEM on Blackwell · Triton and real CUTLASS · FlashAttention · the vLLM debugging workflow · and LLM-driven kernel search — knowing where it wins and where it still fails.</p>
-    <a class="btn" href="a/the-kernel-engineers-skill-map.html">The kernel engineer's skill map →</a>
+    <div style="display:flex;gap:12px;flex-wrap:wrap">
+      <a class="btn" href="a/the-kernel-engineers-skill-map.html">The kernel engineer's skill map →</a>
+      <a class="btn solid" href="workshop.html#partners">Companies: partner with us →</a>
+    </div>
   </div>
 </section>
 </div>"""
