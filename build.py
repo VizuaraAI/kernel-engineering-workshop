@@ -195,7 +195,7 @@ def shell(title, main_html, active_slug=None, rel="", canvas="dark", extra_head=
     topnav = (nl("book.html", "The Book", "book") + nl("workshop.html", "Workshop", "workshop")
               + nl("projects.html", "Projects", "projects") + nl("interactive.html", "Interactive", "interactive")
               + nl("mentor/index.html", "Mentor Guide", "mentor")
-              + nl("workshop.html#partners", "Partner", "partner"))
+              + nl("partners.html", "Partner", "partner"))
     if with_sidebar:
         sb = mentor_sidebar(active_slug, rel) if sb_kind == "mentor" else sidebar(active_slug, rel)
     else:
@@ -318,7 +318,7 @@ def build_index():
     <p>Matmul from scratch to <strong>94% of cuBLAS</strong> · the same ladder on tensor cores · reading SASS &amp; Nsight Compute · TMA/WGMMA on Hopper · NVFP4 &amp; TMEM on Blackwell · Triton and real CUTLASS · FlashAttention · the vLLM debugging workflow · and LLM-driven kernel search — knowing where it wins and where it still fails.</p>
     <div style="display:flex;gap:12px;flex-wrap:wrap">
       <a class="btn" href="a/the-kernel-engineers-skill-map.html">The kernel engineer's skill map →</a>
-      <a class="btn solid" href="workshop.html#partners">Companies: partner with us →</a>
+      <a class="btn solid" href="partners.html">Companies: partner with us →</a>
     </div>
   </div>
 </section>
@@ -567,6 +567,30 @@ def build_mentor_index():
     (DOCS / "mentor" / "index.html").write_text(shell("The Mentor's Handbook · Vizuara Kernel Engineering",
         main, rel="../", canvas="dark", active_nav="mentor"))
 
+def build_partners():
+    cards = [
+        ("hiring", "A hiring pipeline", "Consider the strongest of each cohort for your kernel-engineering roles: a warm, pre-vetted pool of engineers with exactly the skills on your job descriptions. We are happy to share profiles, worklogs, and capstone results."),
+        ("capstone", "Sponsor a capstone", "Give us a real kernel problem your team cares about. We run it as a sponsored capstone, you see the solutions and the talent up close, and your company is credited on the project and to the cohort."),
+        ("compute", "GPU credits & partnership", "Sponsor H100 / B200 hours for students' capstone work and become a founding partner, with your logo on the workshop, this site, and every graduate's certificate."),
+    ]
+    card_html = "".join(
+        f'<div class="proj"><div class="proj-top"><span class="proj-level lvl-capstone">{t}</span></div>'
+        f'<h3>{esc(ti)}</h3><p>{esc(d)}</p></div>' for t, ti, d in cards)
+    main = f"""<div class="section-page">
+<div class="crumb">/ partner</div>
+<div class="eyebrow">For companies &amp; partners</div>
+<h1 class="sec-h1">Partner with Vizuara's Kernel Engineering Workshop</h1>
+<p class="sec-blurb">Kernel engineers are one of the hardest hires in AI right now. By the end of a cohort, our graduates have genuinely built a GEMM from naive to <b style="color:var(--lime)">94% of cuBLAS</b>, FlashAttention from scratch, Hopper &amp; Blackwell kernels (TMA, WGMMA, NVFP4), DeepSeek-grade inference kernels, and worked with LLM-driven kernel generation. Here are three ways your company and Vizuara can work together.</p>
+<div class="proj-grid">{card_html}</div>
+<div class="partners-strip"><span class="ps-label">Founding partners</span><span class="ps-soon">— announced soon —</span></div>
+<div class="ws-cta" style="margin-top:28px">
+  <div class="ws-price">Become a founding partner</div>
+  <a class="btn solid" href="mailto:team@vizuara.com?subject=Kernel%20Engineering%20Workshop%20partnership&amp;body=Hi%20Raj%2C">Partner with us →</a>
+  <p class="ws-note">Raj Dandekar, Co-founder &amp; CEO, Vizuara AI Labs · <a href="mailto:team@vizuara.com">team@vizuara.com</a></p>
+</div>
+</div>"""
+    (DOCS / "partners.html").write_text(shell("Partner with Vizuara Kernel Engineering", main, rel="", canvas="dark", active_nav="partner"))
+
 def build_search_index():
     idx = []
     for a in FLAT:
@@ -596,7 +620,7 @@ def main():
         build_mentor_chapter(c, i)
     build_mentor_index()
     build_index(); build_book(); build_projects(); build_interactive()
-    build_workshop(); build_search_index()
+    build_partners(); build_workshop(); build_search_index()
     written = len(FLAT) + len(MAN["sections"]) + len(MFLAT) + 7
     have = sum(1 for a in FLAT if (ART / f"{a['slug']}.md").exists())
     mhave = sum(1 for c in MFLAT if (MENTOR_DIR / f"{c['slug']}.md").exists())
