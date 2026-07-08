@@ -116,8 +116,12 @@ html[data-theme="light"] .topbar{background:rgba(244,242,236,.94)}
 .lec{display:flex;gap:14px;background:var(--bg);padding:16px 18px}
 .lec.wk{background:var(--bg2)}
 .lec-tag{font-weight:700;color:var(--lime);font-size:13px;flex:0 0 30px}
+.lec-tag.t-code{color:var(--red)}
 .lec-title{font-size:14px;color:var(--green);margin-bottom:5px}
 .lec-desc{font-size:12px;color:var(--green-dim);line-height:1.55}
+.lec-owner{display:inline-block;margin-top:9px;font-family:var(--mono);font-size:9px;font-style:normal;letter-spacing:.1em;text-transform:uppercase;padding:2px 8px;border-radius:100px;border:1px solid currentColor;line-height:1.5;opacity:.9}
+.own-raj{color:var(--lime)}
+.own-shubham{color:var(--red)}
 .ws-cta{margin-top:36px;text-align:center;border:1px solid var(--line);padding:34px;background:var(--bg2)}
 .ws-price{font-family:var(--serif);font-style:italic;font-size:22px;color:var(--green);margin-bottom:18px}
 .ws-note{font-size:12px;color:var(--green-dim);margin-top:14px}

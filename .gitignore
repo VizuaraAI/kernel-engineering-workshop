@@ -1,2 +1,5 @@
 __pycache__/
 *.pyc
+
+# internal planning doc, not for the public site
+kernel-workshop-division.xlsx
