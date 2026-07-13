@@ -122,6 +122,10 @@ html[data-theme="light"] .topbar{background:rgba(244,242,236,.94)}
 .ws-price{font-family:var(--serif);font-style:italic;font-size:22px;color:var(--green);margin-bottom:18px}
 .ws-note{font-size:12px;color:var(--green-dim);margin-top:14px}
 .ws-note a,.skill-pitch a{color:var(--lime)}
+.pre-list{list-style:none;font-size:13px;color:var(--green-dim);line-height:1.7;margin:8px 0 0}
+.pre-list li{padding:4px 0 4px 18px;position:relative}
+.pre-list li::before{content:"\25B8";position:absolute;left:0;color:var(--lime)}
+.pre-list b{color:var(--green);font-weight:600}
 
 /* ================= PAPER CANVAS (articles) ================= */
 .canvas-paper .content{background:var(--paper);color:var(--ink);min-height:calc(100vh - 52px)}

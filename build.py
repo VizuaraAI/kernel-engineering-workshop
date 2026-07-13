@@ -344,12 +344,23 @@ def build_workshop():
         ("W5", "Blackwell &amp; NVFP4", "tcgen05, Tensor Memory, CTA pairs, and the 2000µs→22µs FP4 GEMV journey."),
         ("W6", "DeepSeek, DSpark &amp; AI-written kernels", "FlashMLA/DeepGEMM, speculative decoding, KernelBench and the human+AI+profiler loop."),
     ]
+    interview = [
+        ("L1&ndash;L2", "Execution model", "&ldquo;What is warp divergence, and what does it cost inside an if/else?&rdquo; · &ldquo;Define occupancy &mdash; why isn't 100% always fastest?&rdquo; · &ldquo;Walk me through nvcc &rarr; PTX &rarr; SASS.&rdquo;"),
+        ("L3", "Memory hierarchy", "&ldquo;What is memory coalescing, and how much bandwidth do you lose without it?&rdquo; · &ldquo;What causes shared-memory bank conflicts, and how do you kill them?&rdquo; · &ldquo;Registers vs shared vs global &mdash; when each?&rdquo;"),
+        ("L4&ndash;L6", "GEMM &amp; tensor cores", "&ldquo;Write a tiled matmul and take it from naive toward cuBLAS.&rdquo; · &ldquo;How do 2D block / warp / thread tiling and float4 loads help?&rdquo; · &ldquo;How do tensor cores change the kernel?&rdquo;"),
+        ("L7", "Profiling &amp; debugging", "&ldquo;How do you profile a kernel &mdash; which Nsight Compute sections first?&rdquo; · &ldquo;A kernel is slow: walk me through finding the bottleneck.&rdquo; · &ldquo;How would you debug a race, a NaN, or a hang?&rdquo;"),
+        ("L8 · W1 · W4", "Attention &amp; inference", "&ldquo;Why is naive attention memory-bound, and how does FlashAttention fix it?&rdquo; · &ldquo;Explain online softmax.&rdquo; · &ldquo;Why is decode GEMV-bound, and what does PagedAttention buy you?&rdquo;"),
+        ("W2 · W5", "Modern hardware", "&ldquo;What do TMA and WGMMA give you on Hopper?&rdquo; · &ldquo;Write a kernel that scales across GPU architectures.&rdquo; · &ldquo;What changes on Blackwell with NVFP4 microscaling?&rdquo;"),
+    ]
     lec_html = "".join(
         f'<div class="lec"><div class="lec-tag">{t}</div><div><div class="lec-title">{ti}</div>'
         f'<div class="lec-desc">{d}</div></div></div>' for t, ti, d in lectures)
     wk_html = "".join(
         f'<div class="lec wk"><div class="lec-tag">{t}</div><div><div class="lec-title">{ti}</div>'
         f'<div class="lec-desc">{d}</div></div></div>' for t, ti, d in workshops)
+    iv_html = "".join(
+        f'<div class="lec"><div class="lec-tag">{t}</div><div><div class="lec-title">{ti}</div>'
+        f'<div class="lec-desc">{d}</div></div></div>' for t, ti, d in interview)
     main = f"""<div class="section-page workshop">
 <div class="crumb">/ the-workshop</div>
 <h1 class="sec-h1">Vizuara's Kernel Engineering Workshop</h1>
@@ -358,6 +369,23 @@ def build_workshop():
 <div class="lec-grid">{lec_html}</div>
 <h2 class="ws-h2">6 deep-dive workshops <span class="ws-sub">modern kernel inference topics</span></h2>
 <div class="lec-grid">{wk_html}</div>
+
+<div class="eyebrow" style="margin-top:38px">Careers · interview prep</div>
+<h2 class="ws-h2" style="margin-top:6px">Interview-ready <span class="ws-sub">the questions you'll answer cold</span></h2>
+<p class="int-p">Kernel-engineering interviews at NVIDIA, the neoclouds and the frontier labs test exactly what this workshop drills — hardware–software co-design, not framework trivia. By the end of the cohort you can answer these from muscle memory, and back every answer with a worklog of kernels you built and profiled yourself:</p>
+<div class="lec-grid">{iv_html}</div>
+
+<div class="skill-pitch" style="margin-top:38px">
+  <div class="eyebrow">Before you join</div>
+  <h2 class="ws-h2" style="margin:6px 0 10px">Prerequisites</h2>
+  <p class="int-p" style="margin-top:0">We build CUDA from the silicon up, so no prior GPU or kernel experience is assumed. You'll get the most out of the cohort if you arrive comfortable with:</p>
+  <ul class="pre-list">
+    <li>Basic <b>parallelism</b> — threads, and the idea of many things running at once</li>
+    <li>A working, high-level understanding of <b>LLM inference</b> — roughly what happens when a model generates a token</li>
+    <li>A little <b>Python</b>, and the willingness to pick up some C/C++ as we go</li>
+  </ul>
+  <p class="ws-note" style="margin-top:16px">Every cohort ends with a <b style="color:var(--green)">graded exam</b>, so you leave with a clear, honest measure of what you've mastered. Multi-GPU, cluster and fleet-scale topics are shared as supplementary <b style="color:var(--green)">lecture notes</b> — the live sessions stay focused on getting the most out of a single GPU.</p>
+</div>
 
 <section id="partners" class="partners">
   <div class="eyebrow">For companies &amp; partners</div>
